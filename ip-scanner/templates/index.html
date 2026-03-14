@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IPScope — IP Intelligence Scanner</title>
+<meta name="description" content="Scan any public IP address for geolocation, ISP, organization, and business intelligence.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<!-- Background orbs -->
+<div class="bg-orbs" aria-hidden="true">
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+  <div class="orb orb-3"></div>
+  <div class="orb orb-4"></div>
+</div>
+
+<!-- Grid noise overlay -->
+<div class="grid-overlay" aria-hidden="true"></div>
+
+<!-- ── NAVBAR ─────────────────────────────────────────── -->
+<nav class="navbar">
+  <div class="nav-brand">
+    <div class="nav-logo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2C9.4 5.4 7 8.5 7 12s2.4 6.6 5 10M12 2c2.6 3.4 5 6.5 5 10s-2.4 6.6-5 10M2 12h20"/><ellipse cx="12" cy="12" rx="10" ry="10"/></svg>
+    </div>
+    <span class="nav-title">IP<span class="accent">Scope</span></span>
+    <span class="nav-badge">Intelligence</span>
+  </div>
+  <div class="nav-actions">
+    <button class="btn-myip" id="btnMyIP" title="Detect Your Own Public IP">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2z"/><path d="M12 8v4l3 3"/></svg>
+      My IP
+    </button>
+    <div class="status-dot" id="statusDot" title="Service status"></div>
+  </div>
+</nav>
+
+<!-- ── HERO SEARCH ─────────────────────────────────────── -->
+<section class="hero">
+  <p class="hero-sub">Enter any public IPv4 or IPv6 address to reveal location, ISP, organisation &amp; business intelligence</p>
+  <div class="search-container">
+    <div class="search-box" id="searchBox">
+      <div class="search-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+      </div>
+      <input type="text" id="ipInput" class="search-input" placeholder="e.g. 8.8.8.8 or 2001:4860:4860::8888"
+             spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off">
+      <div class="search-actions">
+        <button class="btn-clear" id="btnClear" title="Clear" style="display:none">✕</button>
+        <button class="btn-scan" id="btnScan">
+          <span class="scan-label">Scan</span>
+          <div class="scan-spinner" id="scanSpinner"></div>
+        </button>
+      </div>
+    </div>
+    <div class="quick-tags">
+      <span class="tag-label">Quick:</span>
+      <button class="tag" onclick="quickScan('8.8.8.8')">8.8.8.8 Google</button>
+      <button class="tag" onclick="quickScan('1.1.1.1')">1.1.1.1 Cloudflare</button>
+      <button class="tag" onclick="quickScan('208.67.222.222')">OpenDNS</button>
+      <button class="tag" onclick="quickScan('13.107.42.14')">Microsoft</button>
+    </div>
+  </div>
+</section>
+
+<!-- ── TABS ────────────────────────────────────────────── -->
+<div class="tab-bar">
+  <button class="tab active" data-tab="single">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+    Single Scan
+  </button>
+  <button class="tab" data-tab="bulk">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/></svg>
+    Bulk Scan
+  </button>
+  <button class="tab" data-tab="history">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3h18v18H3z" opacity=".2"/><path d="M3 9h18M9 21V9"/></svg>
+    History
+  </button>
+</div>
+
+<!-- ── MAIN CONTENT ────────────────────────────────────── -->
+<main class="main-content">
+
+  <!-- ===== SINGLE SCAN TAB ===== -->
+  <div class="tab-pane active" id="tab-single">
+    <div class="results-grid">
+
+      <!-- Empty state -->
+      <div class="empty-state" id="emptyState">
+        <div class="empty-globe">
+          <svg viewBox="0 0 120 120" fill="none">
+            <circle cx="60" cy="60" r="50" stroke="rgba(99,102,241,0.3)" stroke-width="2"/>
+            <ellipse cx="60" cy="60" rx="28" ry="50" stroke="rgba(99,102,241,0.2)" stroke-width="1.5"/>
+            <line x1="10" y1="60" x2="110" y2="60" stroke="rgba(99,102,241,0.2)" stroke-width="1.5"/>
+            <line x1="60" y1="10" x2="60" y2="110" stroke="rgba(99,102,241,0.15)" stroke-width="1.5"/>
+            <circle cx="60" cy="60" r="5" fill="rgba(99,102,241,0.5)"/>
+            <circle cx="60" cy="60" r="5" fill="transparent" stroke="rgba(99,102,241,0.8)" stroke-width="1">
+              <animate attributeName="r" from="5" to="28" dur="2.5s" repeatCount="indefinite"/>
+              <animate attributeName="opacity" from="0.8" to="0" dur="2.5s" repeatCount="indefinite"/>
+            </circle>
+          </svg>
+        </div>
+        <p class="empty-title">Ready to Scan</p>
+        <p class="empty-desc">Enter an IP address above or click <strong>My IP</strong> to scan your own connection.</p>
+      </div>
+
+      <!-- Result card (hidden until scan) -->
+      <div class="result-panel" id="resultPanel" style="display:none">
+
+        <!-- IP Header -->
+        <div class="result-header">
+          <div class="ip-badge">
+            <div class="ip-flag" id="resFlag"></div>
+            <div>
+              <div class="ip-address" id="resIP"></div>
+              <div class="ip-hostname" id="resHostname"></div>
+            </div>
+          </div>
+          <div class="ip-tags" id="resTags"></div>
+        </div>
+
+        <!-- Map -->
+        <div class="map-container">
+          <div id="map"></div>
+          <div class="map-coords" id="mapCoords"></div>
+        </div>
+
+        <!-- Info Cards Grid -->
+        <div class="info-grid">
+
+          <!-- Location Card -->
+          <div class="info-card">
+            <div class="info-card-header">
+              <div class="card-icon loc-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+              </div>
+              <span>Location</span>
+            </div>
+            <div class="info-rows">
+              <div class="info-row"><span class="info-label">City</span><span class="info-val" id="resCity">—</span></div>
+              <div class="info-row"><span class="info-label">Region</span><span class="info-val" id="resRegion">—</span></div>
+              <div class="info-row"><span class="info-label">Country</span><span class="info-val" id="resCountry">—</span></div>
+              <div class="info-row"><span class="info-label">Continent</span><span class="info-val" id="resCont">—</span></div>
+              <div class="info-row"><span class="info-label">Postal Code</span><span class="info-val" id="resZip">—</span></div>
+              <div class="info-row"><span class="info-label">Coordinates</span><span class="info-val mono" id="resLatLon">—</span></div>
+              <div class="info-row"><span class="info-label">Timezone</span><span class="info-val" id="resTZ">—</span></div>
+            </div>
+          </div>
+
+          <!-- Business / Network Card -->
+          <div class="info-card">
+            <div class="info-card-header">
+              <div class="card-icon net-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="6" height="6" rx="1"/><rect x="16" y="2" width="6" height="6" rx="1"/><rect x="9" y="16" width="6" height="6" rx="1"/><path d="M5 8v3a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8M12 14v2"/></svg>
+              </div>
+              <span>Network &amp; Business</span>
+            </div>
+            <div class="info-rows">
+              <div class="info-row"><span class="info-label">ISP</span><span class="info-val" id="resISP">—</span></div>
+              <div class="info-row"><span class="info-label">Organisation</span><span class="info-val" id="resOrg">—</span></div>
+              <div class="info-row"><span class="info-label">AS Number</span><span class="info-val mono" id="resASN">—</span></div>
+              <div class="info-row"><span class="info-label">AS Name</span><span class="info-val" id="resASName">—</span></div>
+              <div class="info-row"><span class="info-label">Hostname</span><span class="info-val mono" id="resHostname2">—</span></div>
+            </div>
+          </div>
+
+          <!-- Security / Business Circle Card -->
+          <div class="info-card card-wide">
+            <div class="info-card-header">
+              <div class="card-icon sec-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+              </div>
+              <span>Security &amp; Business Classification</span>
+            </div>
+            <div class="biz-circles" id="bizCircles"></div>
+          </div>
+
+        </div><!-- /info-grid -->
+
+        <!-- Export Actions -->
+        <div class="export-bar">
+          <button class="btn-export" id="btnCopyJSON">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            Copy JSON
+          </button>
+          <button class="btn-export" id="btnExportCSV">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            Export CSV
+          </button>
+          <button class="btn-export" id="btnShare">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+            Share
+          </button>
+        </div>
+
+      </div><!-- /result-panel -->
+    </div>
+  </div>
+
+  <!-- ===== BULK SCAN TAB ===== -->
+  <div class="tab-pane" id="tab-bulk">
+    <div class="bulk-container">
+      <div class="bulk-input-area">
+        <label class="bulk-label">
+          Enter up to 20 IP addresses, one per line:
+        </label>
+        <textarea id="bulkInput" class="bulk-textarea" placeholder="8.8.8.8&#10;1.1.1.1&#10;208.67.222.222&#10;..."></textarea>
+        <div class="bulk-actions">
+          <span class="bulk-hint" id="bulkCount">0 IPs</span>
+          <button class="btn-bulk-scan" id="btnBulkScan">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            Start Bulk Scan
+          </button>
+        </div>
+      </div>
+      <div class="bulk-progress" id="bulkProgress" style="display:none">
+        <div class="progress-bar-wrap">
+          <div class="progress-bar-fill" id="progressFill"></div>
+        </div>
+        <p class="progress-text" id="progressText">Scanning…</p>
+      </div>
+      <div class="bulk-results" id="bulkResults"></div>
+    </div>
+  </div>
+
+  <!-- ===== HISTORY TAB ===== -->
+  <div class="tab-pane" id="tab-history">
+    <div class="history-container">
+      <div class="history-header">
+        <span class="history-count" id="histCount">0 entries</span>
+        <button class="btn-clear-hist" id="btnClearHist">Clear All</button>
+      </div>
+      <div class="history-list" id="historyList">
+        <div class="history-empty">No scans yet. Results will appear here after scanning.</div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<!-- ── TOAST ─────────────────────────────────────────── -->
+<div class="toast" id="toast"></div>
+
+<!-- ── FOOTER ───────────────────────────────────────── -->
+<footer class="footer">
+  <span>IPScope Intelligence &nbsp;·&nbsp; Powered by ip-api.com &nbsp;·&nbsp; <span id="footerYear"></span></span>
+</footer>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>
