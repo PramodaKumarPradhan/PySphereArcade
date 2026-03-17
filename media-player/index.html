@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nova Media Player</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="logo">
+                <span class="material-icons-round">play_circle_filled</span>
+                <h1>Nova Player</h1>
+            </div>
+            
+            <button class="add-files-btn" id="addFilesBtn">
+                <span class="material-icons-round">add</span> Add Media
+            </button>
+            <input type="file" id="fileInput" accept="video/*, audio/*" multiple hidden>
+
+            <div class="albums-section">
+                <div class="section-header">
+                    <h2>Albums / Playlists</h2>
+                    <button class="icon-btn" id="createAlbumBtn" title="Create Album">
+                        <span class="material-icons-round">create_new_folder</span>
+                    </button>
+                </div>
+                <ul class="album-list" id="albumList">
+                    <li class="active" data-id="all">All Media</li>
+                </ul>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="player-wrapper">
+                <video id="mainPlayer" class="media-element" controls style="display: none;"></video>
+                <div id="audioVisualizer" class="audio-visualizer">
+                    <span class="material-icons-round audio-icon">music_note</span>
+                    <h2 id="nowPlayingTitle">No media playing</h2>
+                    <canvas id="visualizerCanvas"></canvas>
+                </div>
+            </div>
+
+            <!-- Media Library -->
+            <div class="media-library">
+                <div class="library-header">
+                    <h2 id="currentAlbumTitle">All Media</h2>
+                    <div class="view-controls">
+                        <button class="icon-btn active"><span class="material-icons-round">grid_view</span></button>
+                    </div>
+                </div>
+                <div class="media-grid" id="mediaGrid">
+                    <div class="empty-state">
+                        <span class="material-icons-round">folder_open</span>
+                        <p>No media files added yet. Click "Add Media" to start.</p>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modals -->
+    <div class="modal" id="createAlbumModal">
+        <div class="modal-content">
+            <h2>Create New Album</h2>
+            <input type="text" id="albumNameInput" placeholder="Album Name">
+            <div class="modal-actions">
+                <button class="btn-text" id="cancelAlbumBtn">Cancel</button>
+                <button class="btn-primary" id="saveAlbumBtn">Create</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

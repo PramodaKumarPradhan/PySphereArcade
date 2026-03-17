@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Indian Gratuity Calculator | Premium Payroll Tool</title>
+    <meta name="description" content="Calculate your gratuity online with our premium, accurate Indian Gratuity Calculator. Check eligibility and tax exemptions.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="background-effects">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+        <div class="blob blob-3"></div>
+    </div>
+
+    <main class="calculator-container">
+        <header>
+            <div class="logo-area">
+                <i class="fa-solid fa-coins logo-icon"></i>
+                <h1>Gratuity Calculator</h1>
+            </div>
+            <p class="subtitle">Accurate Indian Payroll System Calculation</p>
+        </header>
+
+        <section class="calculator-form">
+            <div class="input-group full-width">
+                <label>Covered under Payment of Gratuity Act, 1972?</label>
+                <div class="toggle-container">
+                    <input type="radio" id="covered-yes" name="is-covered" value="yes" checked>
+                    <label for="covered-yes" class="toggle-btn">Yes</label>
+                    <input type="radio" id="covered-no" name="is-covered" value="no">
+                    <label for="covered-no" class="toggle-btn">No</label>
+                </div>
+                <div class="hint-text"><i class="fa-solid fa-circle-info"></i> Most factory, mine, oilfield, plantation, port and railway company employees are covered.</div>
+            </div>
+
+            <div class="input-group full-width">
+                <label for="salary">Monthly Basic Salary + DA (₹)</label>
+                <div class="input-wrapper">
+                    <span class="currency-symbol">₹</span>
+                    <input type="number" id="salary" placeholder="e.g. 50000" min="0" step="100">
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="input-group">
+                    <label for="years">Completed Years</label>
+                    <input type="number" id="years" placeholder="e.g. 5" min="0" max="60" step="1">
+                </div>
+                
+                <div class="input-group">
+                    <label for="months">Months</label>
+                    <input type="number" id="months" placeholder="e.g. 8" min="0" max="11" step="1">
+                </div>
+            </div>
+
+            <button id="calculate-btn" class="primary-btn">
+                <span>Calculate Gratuity</span>
+                <i class="fa-solid fa-arrow-right"></i>
+            </button>
+        </section>
+
+        <section id="results" class="results-section hidden">
+            <div class="result-card main-result">
+                <h3>Total Estimated Gratuity</h3>
+                <div class="amount" id="total-gratuity">₹0</div>
+            </div>
+
+            <div class="results-breakdown">
+                <div class="result-item">
+                    <span class="label">Tax-Free Amount</span>
+                    <span class="value success" id="tax-free-amount">₹0</span>
+                </div>
+                <div class="result-item">
+                    <span class="label">Taxable Amount</span>
+                    <span class="value warning" id="taxable-amount">₹0</span>
+                </div>
+                <div class="result-item">
+                    <span class="label">Calculated Tenure</span>
+                    <span class="value" id="effective-tenure">0 Years</span>
+                </div>
+            </div>
+
+            <div id="eligibility-warning" class="warning-alert hidden">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+                <p>Note: Gratuity is typically payable only after 5 years of continuous service.</p>
+            </div>
+        </section>
+    </main>
+
+    <script src="script.js"></script>
+</body>
+</html>
