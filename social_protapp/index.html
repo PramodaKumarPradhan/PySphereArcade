@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nexus - Social Chat Prototype</title>
+    <meta name="description" content="A real-time social chat interface with profile setup.">
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar / Profile Setup Area -->
+        <aside class="profile-sidebar" id="profileSidebar">
+            <div class="glass-panel profile-content">
+                <div class="profile-header">
+                    <h2>Profile</h2>
+                    <button id="editProfileBtn" class="icon-btn" aria-label="Edit Profile" title="Edit Profile"><i class="ri-edit-line"></i></button>
+                </div>
+                
+                <div class="profile-view" id="profileView">
+                    <div class="avatar-container">
+                        <img src="https://ui-avatars.com/api/?name=Guest+User&background=random&size=128" alt="Avatar" id="displayAvatar">
+                        <div class="status-indicator online"></div>
+                    </div>
+                    <h3 id="displayUsername">Guest User</h3>
+                    <p class="bio" id="displayBio">Just exploring the digital realm. Say hi!</p>
+                </div>
+
+                <div class="profile-edit hidden" id="profileEdit">
+                    <form id="profileForm">
+                        <div class="input-group">
+                            <label for="inputUsername">Username</label>
+                            <input type="text" id="inputUsername" placeholder="e.g. CyberPunk99" value="Guest User">
+                        </div>
+                        <div class="input-group">
+                            <label for="inputAvatar">Avatar URL (<small>leave blank for default</small>)</label>
+                            <input type="url" id="inputAvatar" placeholder="https://..." value="https://ui-avatars.com/api/?name=Guest+User&background=random&size=128">
+                        </div>
+                        <div class="input-group">
+                            <label for="inputBio">Bio</label>
+                            <textarea id="inputBio" rows="3" placeholder="Tell us about yourself">Just exploring the digital realm. Say hi!</textarea>
+                        </div>
+                        <button type="submit" class="primary-btn">Save Changes</button>
+                    </form>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Chat Area -->
+        <main class="chat-main">
+            <div class="glass-panel chat-container">
+                <header class="chat-header">
+                    <div class="chat-header-info">
+                        <h2>Global Lounge</h2>
+                        <span class="member-count"><i class="ri-group-line"></i> 42 Online</span>
+                    </div>
+                    <div class="chat-header-actions">
+                        <button class="icon-btn" title="Search"><i class="ri-search-line"></i></button>
+                        <button class="icon-btn" title="More Options"><i class="ri-more-2-fill"></i></button>
+                    </div>
+                </header>
+
+                <div class="chat-feed" id="chatFeed">
+                    <!-- Simulated previous messages -->
+                    <div class="message received">
+                        <img src="https://ui-avatars.com/api/?name=Alex&background=4A00E0&color=fff" alt="Alex" class="message-avatar">
+                        <div class="message-content">
+                            <span class="message-author">Alex</span>
+                            <div class="message-bubble">
+                                Welcome to Nexus! Feel free to set up your profile on the left side of the screen.
+                            </div>
+                            <span class="message-time">10:42 AM</span>
+                        </div>
+                    </div>
+                    <div class="message received">
+                        <img src="https://ui-avatars.com/api/?name=Sam&background=8E2DE2&color=fff" alt="Sam" class="message-avatar">
+                        <div class="message-content">
+                            <span class="message-author">Sam</span>
+                            <div class="message-bubble">
+                                This chat interface looks so sleek ✨ Love the glassmorphism effects!
+                            </div>
+                            <span class="message-time">10:45 AM</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="chat-input-area">
+                    <form id="chatForm">
+                        <button type="button" class="icon-btn attachment-btn" title="Attach File"><i class="ri-attachment-2"></i></button>
+                        <input type="text" id="messageInput" placeholder="Type a message..." autocomplete="off">
+                        <button type="submit" class="send-btn" title="Send Message"><i class="ri-send-plane-fill"></i></button>
+                    </form>
+                </div>
+            </div>
+        </main>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
