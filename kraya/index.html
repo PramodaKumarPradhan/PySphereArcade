@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Kraya - India's premium e-commerce marketplace for quality clothing, accessories, electronics and home decors at lowest prices.">
+  <title>Kraya | Online Shopping Site - Shop Quality Fashion & Home Decors</title>
+  <link rel="stylesheet" href="styles.css">
+  
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Canvas Confetti CDN for checkout celebrations -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+</head>
+<body>
+
+  <!-- Main Shell Header -->
+  <header>
+    <div class="header-top">
+      <div class="container d-flex align-center justify-between h-100">
+        <!-- Logo -->
+        <a href="#catalog" class="logo">
+          <i data-lucide="shopping-bag"></i> Kraya<span>.</span>
+        </a>
+        
+        <!-- Search bar -->
+        <div class="search-container" id="global-search-container">
+          <i data-lucide="search" class="search-icon"></i>
+          <input type="text" placeholder="Search by Product Name or Category..." class="search-bar" id="global-search-input">
+          <i data-lucide="x" class="search-clear" id="global-search-clear"></i>
+          
+          <!-- Autocomplete results -->
+          <div class="search-suggestions" id="global-search-suggestions"></div>
+        </div>
+        
+        <!-- Actions & Buttons -->
+        <div class="header-actions">
+          <button class="supplier-btn" id="header-supplier-btn">Become a Supplier</button>
+          
+          <a href="#profile" class="action-btn">
+            <i data-lucide="user"></i>
+            <span>Profile</span>
+          </a>
+          
+          <a href="#profile?tab=wishlist" class="action-btn">
+            <i data-lucide="heart"></i>
+            <span>Wishlist</span>
+            <span class="badge-count" id="wishlist-badge" style="display: none;">0</span>
+          </a>
+          
+          <button class="action-btn" id="header-cart-btn">
+            <i data-lucide="shopping-cart"></i>
+            <span>Cart</span>
+            <span class="badge-count" id="cart-badge" style="display: none;">0</span>
+          </button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Mega Menu Category Navigation -->
+    <nav class="header-nav" id="global-nav-container"></nav>
+  </header>
+
+  <!-- Main App Viewport (Dynamic content injected here) -->
+  <main id="app-viewport">
+    <div class="container d-flex align-center justify-between" style="padding-top: 100px; justify-content: center;">
+      <div class="spinner"></div>
+    </div>
+  </main>
+
+  <!-- Cart Drawer Overlay -->
+  <div class="cart-drawer-overlay" id="cart-drawer-overlay">
+    <div class="cart-drawer">
+      <div class="cart-drawer-header d-flex align-center justify-between">
+        <h3 class="d-flex align-center gap-1"><i data-lucide="shopping-cart"></i> My Cart</h3>
+        <button id="cart-drawer-close" class="action-btn"><i data-lucide="x" style="font-size: 24px;"></i></button>
+      </div>
+      <div class="cart-drawer-body" id="cart-drawer-items-list">
+        <!-- Rendered dynamically -->
+      </div>
+      <div class="cart-drawer-footer" id="cart-drawer-summary-pane">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Shared Universal Modal Shell -->
+  <div class="modal-overlay" id="universal-modal">
+    <div class="modal-content" id="universal-modal-content">
+      <!-- Injected dynamically -->
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer>
+    <div class="container">
+      <div class="d-flex flex-wrap justify-between gap-3">
+        <div style="flex: 1 1 250px;">
+          <h3 style="color: var(--primary-color); font-weight: 800; font-size: 22px; margin-bottom: 15px;">Kraya.</h3>
+          <p style="color: #bbb; line-height: 1.6;">India's favorite online buying and reselling shop. Discover thousands of quality products from trusted suppliers at wholesale prices.</p>
+        </div>
+        <div style="flex: 1 1 150px;">
+          <h4 style="margin-bottom: 15px; font-weight: 700;">Quick Links</h4>
+          <ul style="list-style: none; display: flex; flex-direction: column; gap: 10px; color: #bbb;">
+            <li><a href="#catalog" style="hover: color: #fff;">Home Shop</a></li>
+            <li><a href="#profile" style="hover: color: #fff;">My Account</a></li>
+            <li><a href="#profile?tab=orders" style="hover: color: #fff;">Track Orders</a></li>
+            <li><a href="#seller" style="hover: color: #fff;">Supplier Panel</a></li>
+          </ul>
+        </div>
+        <div style="flex: 1 1 150px;">
+          <h4 style="margin-bottom: 15px; font-weight: 700;">Categories</h4>
+          <ul style="list-style: none; display: flex; flex-direction: column; gap: 10px; color: #bbb;">
+            <li><a href="#catalog?category=Women%20Ethnic" style="hover: color: #fff;">Women Ethnic</a></li>
+            <li><a href="#catalog?category=Men" style="hover: color: #fff;">Men's Apparel</a></li>
+            <li><a href="#catalog?category=Electronics" style="hover: color: #fff;">Electronics</a></li>
+            <li><a href="#catalog?category=Beauty%20%26%20Health" style="hover: color: #fff;">Beauty & Cosmetics</a></li>
+          </ul>
+        </div>
+        <div style="flex: 1 1 250px;">
+          <h4 style="margin-bottom: 15px; font-weight: 700;">Contact Us</h4>
+          <p style="color: #bbb; margin-bottom: 10px;"><i data-lucide="mail" style="display: inline-block; vertical-align: middle; margin-right: 6px; width: 16px;"></i> support@kraya.com</p>
+          <p style="color: #bbb; margin-bottom: 10px;"><i data-lucide="phone" style="display: inline-block; vertical-align: middle; margin-right: 6px; width: 16px;"></i> +91 98765 43210</p>
+          <p style="color: #bbb;"><i data-lucide="map-pin" style="display: inline-block; vertical-align: middle; margin-right: 6px; width: 16px;"></i> Bhubaneswar, Odisha, India</p>
+        </div>
+      </div>
+      <div style="border-top: 1px solid #333; margin-top: 40px; padding-top: 20px; text-align: center; color: #777;">
+        <p>&copy; 2026 Kraya E-commerce Platform. All rights reserved.</p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- App Core Module -->
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
