@@ -1,0 +1,19 @@
+# Netlify Configuration File
+# Serves the Kraya store directly at the root domain
+
+[build]
+  # The directory containing the static HTML, CSS, and JS files
+  publish = "kraya"
+
+# Set default security headers and cache control for static assets
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    X-XSS-Protection = "1; mode=block"
+
+[[headers]]
+  for = "/assets/product_images/*"
+  [headers.values]
+    Cache-Control = "public, max-age=604800"
