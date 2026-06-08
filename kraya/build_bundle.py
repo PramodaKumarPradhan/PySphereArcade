@@ -24,7 +24,7 @@ def build_bundle():
     db_content = db_content.replace("assets/product_images/", github_assets_url)
     
     # 3. Read Components
-    components = ['reseller', 'catalog', 'detail', 'cart', 'profile', 'seller']
+    components = ['login', 'reseller', 'catalog', 'detail', 'cart', 'profile', 'seller']
     components_js = ""
     
     for comp in components:
@@ -96,6 +96,8 @@ def build_bundle():
       render_catalog(viewport, params);
     } else if (componentName === 'detail') {
       render_detail(viewport, params);
+    } else if (componentName === 'login') {
+      render_login(viewport, params);
     } else if (componentName === 'cart') {
       render_cart(viewport, params);
     } else if (componentName === 'profile') {

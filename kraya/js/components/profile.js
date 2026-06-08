@@ -1,5 +1,6 @@
 // Kraya User Profile & Wishlist Component
 import { db } from '../db.js';
+import { openModal, closeModal } from '../app.js';
 
 let activeTab = 'orders'; // orders, wishlist, settings
 
@@ -38,6 +39,10 @@ export function render(container, params) {
           
           <button class="seller-menu-item ${activeTab === 'settings' ? 'active' : ''}" data-tab="settings">
             <i data-lucide="settings"></i> Profile & Address
+          </button>
+          
+          <button class="seller-menu-item" id="profile-logout-btn" style="color: var(--error); margin-top: 40px; border-top: 1px solid var(--border-light); padding-top: 20px; width: 100%;">
+            <i data-lucide="log-out"></i> Log Out
           </button>
         </aside>
         
@@ -139,6 +144,11 @@ function renderOrdersTab(orders) {
                       <div>
                         <h4 style="font-size: 13px; font-weight: 700; line-height:1.4;">${item.name}</h4>
                         <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">Size: <strong>${item.size}</strong> | Qty: <strong>${item.quantity}</strong></div>
+                        <div style="margin-top: 6px;">
+                          <button class="clear-filters-btn write-item-review" data-product-id="${item.productId}" data-product-name="${item.name}" style="font-size: 11px; font-weight: 700; color: var(--primary-color);">
+                            ★ Write a Product Review
+                          </button>
+                        </div>
                       </div>
                     </div>
                     <div style="font-weight: 700; font-size: 14px;">₹${item.price * item.quantity}</div>
@@ -257,10 +267,10 @@ function renderSettingsTab(user, addresses) {
         </div>
       </div>
       <div class="stat-card">
-        <div class="stat-icon green"><i data-lucide="user-check"></i></div>
+        <div class="stat-icon green"><i data-lucide="coins" style="color: gold; fill: gold;"></i></div>
         <div class="stat-info">
-          <h3>Active</h3>
-          <p>Reseller Account State</p>
+          <h3>${user.superCoins || 0}</h3>
+          <p>My SuperCoins Wallet</p>
         </div>
       </div>
     </div>
@@ -313,7 +323,7 @@ function renderSettingsTab(user, addresses) {
 
 function wireUpProfileEvents(container) {
   // Tab selector clicking switcher
-  container.querySelectorAll(".seller-menu-item").forEach(btn => {
+  container.querySelectorAll(".seller-menu-item[data-tab]").forEach(btn => {
     btn.addEventListener("click", () => {
       container.querySelectorAll(".seller-menu-item").forEach(b => b.classList.remove("active"));
       btn.classList.add("active");
@@ -333,6 +343,17 @@ function wireUpProfileEvents(container) {
       }
     });
   });
+  
+  // Bind Logout
+  const logoutBtn = container.querySelector("#profile-logout-btn");
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", () => {
+      db.logoutUser();
+      alert("Logged out successfully!");
+      window.location.hash = '#catalog';
+      window.location.reload();
+    });
+  }
   
   // Setup events on initial tab load
   const contentPane = document.getElementById("profile-tab-content");
@@ -404,5 +425,92 @@ function wireUpTabSpecificEvents(contentPane) {
         wireUpTabSpecificEvents(contentPane);
       }
     });
+  });
+  
+  // Write a product review
+  contentPane.querySelectorAll(".write-item-review").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const prodId = btn.dataset.productId;
+      const prodName = btn.dataset.productName;
+      triggerWriteReviewModal(prodId, prodName);
+    });
+  });
+}
+
+function triggerWriteReviewModal(productId, productName) {
+  let selectedRating = 5;
+  
+  const modalHtml = `
+    <div class="modal-header">
+      <h3 class="d-flex align-center gap-1"><i data-lucide="star" style="color: var(--primary-color);"></i> Write Product Review</h3>
+      <button id="review-close-modal" class="action-btn"><i data-lucide="x"></i></button>
+    </div>
+    <form id="submit-review-form">
+      <div class="modal-body" style="display:flex; flex-direction:column; gap:16px;">
+        <div>
+          <h4 style="font-size:14px; font-weight:700;">${productName}</h4>
+          <p style="font-size:12px; color:var(--text-muted); margin-top:2px;">Rate the quality, stitching and delivery experience of this product.</p>
+        </div>
+        
+        <div class="form-group" style="margin-bottom:0;">
+          <label class="form-label">Tap Stars to Rate</label>
+          <div class="d-flex gap-1" style="font-size:24px; color: #ccc;" id="review-stars-container">
+            ${[1,2,3,4,5].map(val => `
+              <i data-lucide="star" class="review-star-item" data-value="${val}" style="cursor:pointer; fill: gold; color: gold; width:28px; height:28px;"></i>
+            `).join('')}
+          </div>
+        </div>
+        
+        <div class="form-group" style="margin-bottom:0;">
+          <label class="form-label">Review Comment</label>
+          <textarea class="form-control" id="review-comment" rows="4" placeholder="Fabric is soft, color exactly as shown. Highly recommended!" required></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-large btn-cart-add" style="padding:10px 20px;" id="review-cancel-btn">Cancel</button>
+        <button type="submit" class="btn-large btn-buy-now" style="padding:10px 20px;">Submit Review</button>
+      </div>
+    </form>
+  `;
+  
+  openModal(modalHtml);
+  
+  // Stars selection click handling
+  const starContainer = document.getElementById("review-stars-container");
+  const stars = starContainer.querySelectorAll(".review-star-item");
+  
+  stars.forEach(star => {
+    star.addEventListener("click", () => {
+      const val = Number(star.dataset.value);
+      selectedRating = val;
+      
+      // Update stars color
+      stars.forEach(s => {
+        const sVal = Number(s.dataset.value);
+        if (sVal <= val) {
+          s.style.fill = 'gold';
+          s.style.color = 'gold';
+        } else {
+          s.style.fill = 'none';
+          s.style.color = '#ccc';
+        }
+      });
+    });
+  });
+  
+  // Close Modal Actions
+  document.getElementById("review-close-modal").addEventListener("click", closeModal);
+  document.getElementById("review-cancel-btn").addEventListener("click", closeModal);
+  
+  // Submit Review Handler
+  document.getElementById("submit-review-form").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const comment = document.getElementById("review-comment").value.trim();
+    const user = db.getCurrentUser();
+    
+    db.submitReview(productId, selectedRating, comment, user ? user.name : 'Anonymous');
+    alert("Thank you! Your product review has been submitted successfully.");
+    closeModal();
+    window.location.reload();
   });
 }

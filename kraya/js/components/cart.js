@@ -8,6 +8,7 @@ let paymentMethod = 'cod'; // cod, upi, card
 let appliedDiscount = 0;
 let promoCodeText = '';
 let isResellerOrder = false;
+let redeemCoinsChecked = false;
 
 export function render(container, params) {
   const cartItems = db.getCart();
@@ -36,9 +37,16 @@ function recalcTotals(cartItems) {
     originalTotal += item.originalPrice * item.quantity;
   });
   
+  const user = db.getCurrentUser();
+  const coinsBalance = user ? user.superCoins : 0;
+  
+  // Redeem SuperCoins rule: 1 Coin = 1 rupee. Max 50 coins or 10% of cart value
+  const maxRedeemableCoins = Math.min(coinsBalance, 50, Math.floor(itemTotal * 0.1));
+  const coinsRedeemed = redeemCoinsChecked ? maxRedeemableCoins : 0;
+  
   const discountSavings = originalTotal - itemTotal;
   const onlineDiscount = (paymentMethod !== 'cod') ? 15 : 0; // ₹15 discount on UPI/Card payments
-  const finalAmount = Math.max(0, itemTotal - appliedDiscount - onlineDiscount);
+  const finalAmount = Math.max(0, itemTotal - appliedDiscount - onlineDiscount - coinsRedeemed);
   
   const totals = {
     itemTotal,
@@ -46,6 +54,9 @@ function recalcTotals(cartItems) {
     discountSavings,
     couponDiscount: appliedDiscount,
     onlineDiscount,
+    coinsRedeemed,
+    maxRedeemableCoins,
+    coinsBalance,
     finalAmount
   };
   
@@ -210,8 +221,21 @@ function renderCheckoutShell(totals, cartItems) {
             <span>-₹${totals.discountSavings}</span>
           </div>
           
+          <!-- SuperCoins redemption slider (Flipkart specialty) -->
+          ${totals.coinsBalance > 0 ? `
+            <div style="border-top: 1px dashed var(--border-light); border-bottom: 1px dashed var(--border-light); padding: 12px 0; margin-bottom: 12px; margin-top: 12px;">
+              <label class="d-flex align-center gap-1" style="cursor: pointer; font-size: 13px; font-weight: 700; color: var(--secondary-color);">
+                <input type="checkbox" id="checkout-coins-checkbox" style="width: 16px; height: 16px; accent-color: var(--secondary-color);" ${redeemCoinsChecked ? 'checked' : ''}>
+                Redeem up to ${totals.maxRedeemableCoins} SuperCoins (Save ₹${totals.maxRedeemableCoins})
+              </label>
+              <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px; display:flex; align-items:center; gap:4px;">
+                <i data-lucide="coins" style="width:14px; color: gold; fill: gold;"></i> Wallet Balance: <strong>${totals.coinsBalance} Coins</strong>
+              </div>
+            </div>
+          ` : ''}
+          
           <!-- Coupon Application Form -->
-          <div style="border-top: 1px solid var(--border-light); border-bottom: 1px solid var(--border-light); padding: 15px 0; margin: 15px 0;">
+          <div style="border-bottom: 1px solid var(--border-light); padding-bottom: 15px; margin-bottom: 15px;">
             <div style="font-size: 12px; font-weight: 700; margin-bottom: 8px;">Apply Discount Coupon</div>
             <div class="d-flex gap-1">
               <input type="text" class="form-control" id="checkout-coupon-input" placeholder="e.g. KRAYANEW10" style="padding: 8px 12px; font-size: 13px;" value="${promoCodeText}">
@@ -232,6 +256,12 @@ function renderCheckoutShell(totals, cartItems) {
               <span>-₹${totals.onlineDiscount}</span>
             </div>` : ''}
             
+          ${totals.coinsRedeemed > 0 ? `
+            <div class="price-row-detail" style="color: var(--success); font-weight: 600;">
+              <span>SuperCoins Discount</span>
+              <span>-₹${totals.coinsRedeemed}</span>
+            </div>` : ''}
+            
           <div class="price-row-detail">
             <span>Delivery Charges</span>
             <span style="color: var(--success); font-weight: 700;">FREE</span>
@@ -243,7 +273,7 @@ function renderCheckoutShell(totals, cartItems) {
           </div>
           
           <div style="background-color: var(--success-bg); color: var(--success); text-align: center; padding: 10px; border-radius: 6px; font-size: 12px; font-weight: 700; margin-top: 20px;">
-            🎉 You save ₹${totals.discountSavings + totals.couponDiscount + totals.onlineDiscount} on this order!
+            🎉 You save ₹${totals.discountSavings + totals.couponDiscount + totals.onlineDiscount + totals.coinsRedeemed} on this order!
           </div>
         </aside>
         
@@ -531,6 +561,15 @@ function wireUpCheckoutEvents(totals, cartItems) {
     });
   }
   
+  // SuperCoins checkbox event toggle
+  const coinsCheckbox = document.getElementById("checkout-coins-checkbox");
+  if (coinsCheckbox) {
+    coinsCheckbox.addEventListener("change", (e) => {
+      redeemCoinsChecked = e.target.checked;
+      recalcTotals(cartItems);
+    });
+  }
+  
   // Place Order Submit click
   const placeOrderBtn = document.getElementById("checkout-place-order-btn");
   if (placeOrderBtn) {
@@ -573,6 +612,7 @@ function wireUpCheckoutEvents(totals, cartItems) {
       activeStep = 4;
       appliedDiscount = 0;
       promoCodeText = '';
+      redeemCoinsChecked = false; // reset
       
       // Fire Confetti!
       fireCheckoutConfetti();
@@ -619,10 +659,18 @@ function renderConfirmationView(order) {
             <span>Total Paid Amount:</span>
             <span>₹${order.totals.finalAmount}</span>
           </div>
+          ${order.totals.coinsRedeemed > 0 ? `
+            <div style="display:flex; justify-content:space-between; color: var(--success); font-weight:600; margin-top:4px;">
+              <span>SuperCoins Redeemed:</span>
+              <span>-${order.totals.coinsRedeemed} Coins</span>
+            </div>` : ''}
           ${order.resellerMargin > 0 ? `
             <div style="background-color: rgba(63, 81, 181, 0.05); color: var(--secondary-color); padding: 10px; border-radius: 6px; font-weight: 700; text-align: center; margin-top: 15px; border: 1px solid rgba(63, 81, 181, 0.15);">
               📈 Reseller Margin Earned: ₹${order.resellerMargin} (Will reflect in balance after shipment)
             </div>` : ''}
+          <div style="background-color: var(--success-bg); color: var(--success); padding: 10px; border-radius: 6px; font-weight: 700; text-align: center; margin-top: 15px; border: 1px solid rgba(3, 166, 133, 0.2); display:flex; align-items:center; justify-content:center; gap:6px;">
+            <i data-lucide="coins" style="width:18px; fill:gold; color:gold;"></i> SuperCoins Credited on Order: +${order.superCoinsEarned || 0} Coins!
+          </div>
         </div>
       </div>
       

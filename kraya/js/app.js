@@ -41,6 +41,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // Render Global Components
   renderNavigation();
   updateBadges();
+  updateHeaderProfile();
   setupGlobalSearch();
   setupCartDrawer();
   setupUniversalModal();
@@ -57,6 +58,10 @@ document.addEventListener("DOMContentLoaded", () => {
   // Listener events
   window.addEventListener("kraya_cart_updated", updateBadges);
   window.addEventListener("kraya_wishlist_updated", updateBadges);
+  window.addEventListener("kraya_user_updated", () => {
+    updateBadges();
+    updateHeaderProfile();
+  });
   
   // Become a supplier modal trigger
   document.getElementById("header-supplier-btn").addEventListener("click", triggerSupplierLogin);
@@ -133,6 +138,18 @@ export function updateBadges() {
     wishlistBadge.style.display = "block";
   } else {
     wishlistBadge.style.display = "none";
+  }
+}
+
+// Update profile text in top navigation bar
+function updateHeaderProfile() {
+  const profileText = document.getElementById("header-profile-text");
+  if (!profileText) return;
+  const user = db.getCurrentUser();
+  if (user) {
+    profileText.textContent = user.name.split(' ')[0]; // first name
+  } else {
+    profileText.textContent = "Sign In";
   }
 }
 
@@ -460,9 +477,19 @@ function handleRouting() {
     const id = route.substring(9);
     loadComponent('detail', { id });
   } else if (route === '#checkout') {
+    if (!db.getCurrentUser()) {
+      window.location.hash = '#login';
+      return;
+    }
     loadComponent('cart', { step: 'checkout' });
   } else if (route === '#profile') {
+    if (!db.getCurrentUser()) {
+      window.location.hash = '#login';
+      return;
+    }
     loadComponent('profile', params);
+  } else if (route === '#login') {
+    loadComponent('login', params);
   } else if (route === '#seller') {
     loadComponent('seller', params);
   } else {

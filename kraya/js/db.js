@@ -524,6 +524,18 @@ const INITIAL_ADDRESSES = [
   }
 ];
 
+const INITIAL_USERS = [
+  {
+    name: "Pramoda Kumar Pradhan",
+    email: "pramoda@kraya.com",
+    password: "user123",
+    phone: "9876543210",
+    resellerBalance: 1250,
+    sharedProductsCount: 12,
+    superCoins: 120
+  }
+];
+
 // Helper to write to LocalStorage
 function write(key, data) {
   localStorage.setItem(`kraya_${key}`, JSON.stringify(data));
@@ -553,13 +565,11 @@ export const db = {
     read("wishlist", []);
     read("orders", []);
     read("addresses", INITIAL_ADDRESSES);
-    read("user", {
-      name: "Pramoda Kumar Pradhan",
-      email: "pramoda@kraya.com",
-      phone: "9876543210",
-      resellerBalance: 1250, // Reseller total earnings
-      sharedProductsCount: 12
-    });
+    read("users", INITIAL_USERS);
+    // current_user is null initially to force login
+    if (localStorage.getItem("kraya_current_user") === null) {
+      localStorage.setItem("kraya_current_user", "null");
+    }
   },
 
   // Products
@@ -610,6 +620,35 @@ export const db = {
     const filtered = products.filter(p => p.id !== Number(id));
     write("products", filtered);
     return true;
+  },
+
+  // Submit product review
+  submitReview(productId, rating, comment, userName) {
+    const products = this.getProducts();
+    const index = products.findIndex(p => p.id === Number(productId));
+    if (index !== -1) {
+      const p = products[index];
+      const today = new Date().toISOString().split("T")[0];
+      const newReview = {
+        name: userName || "Anonymous",
+        rating: Number(rating),
+        comment: comment,
+        date: today
+      };
+      
+      p.reviews = p.reviews || [];
+      p.reviews.unshift(newReview);
+      p.reviewsCount = (p.reviewsCount || 0) + 1;
+      
+      // Recompute average rating
+      const sum = p.reviews.reduce((acc, r) => acc + r.rating, 0);
+      p.rating = Number((sum / p.reviews.length).toFixed(1));
+      
+      products[index] = p;
+      write("products", products);
+      return true;
+    }
+    return false;
   },
 
   // Cart
@@ -706,11 +745,18 @@ export const db = {
 
   // Orders
   getOrders() {
-    return read("orders", []);
+    // Return only orders belonging to active user if logged in
+    const user = this.getCurrentUser();
+    const allOrders = read("orders", []);
+    if (!user) return [];
+    return allOrders.filter(o => o.userEmail === user.email);
   },
 
   createOrder(orderData) {
-    const orders = this.getOrders();
+    const user = this.getCurrentUser();
+    if (!user) return null;
+    
+    const allOrders = read("orders", []);
     const nextId = "KR" + Math.floor(100000 + Math.random() * 900000);
     const date = new Date().toISOString().split("T")[0];
     
@@ -722,18 +768,30 @@ export const db = {
       paymentMethod: orderData.paymentMethod,
       address: orderData.address,
       totals: orderData.totals,
-      resellerMargin: orderData.resellerMargin || 0
+      resellerMargin: orderData.resellerMargin || 0,
+      userEmail: user.email
     };
 
-    orders.unshift(newOrder); // Newest order first
-    write("orders", orders);
+    allOrders.unshift(newOrder); // Newest order first
+    write("orders", allOrders);
 
-    // Update user balance if there was a reseller margin
+    // Update user stats (reseller balance, superCoins deduction & addition)
     if (orderData.resellerMargin > 0) {
-      const user = this.getCurrentUser();
       user.resellerBalance += Number(orderData.resellerMargin);
-      this.updateCurrentUser(user);
     }
+    
+    // Deduct coins if applied
+    if (orderData.totals.coinsRedeemed > 0) {
+      user.superCoins = Math.max(0, user.superCoins - orderData.totals.coinsRedeemed);
+    }
+    
+    // Earn coins (5 SuperCoins per 100 spent)
+    const coinsEarned = Math.floor(orderData.totals.finalAmount / 20);
+    user.superCoins += coinsEarned;
+    newOrder.superCoinsEarned = coinsEarned;
+    
+    // Save order data updates back to DB
+    this.updateCurrentUser(user);
 
     return newOrder;
   },
@@ -764,19 +822,73 @@ export const db = {
     return addresses;
   },
 
-  // User details
+  // User details & Authentication Management
+  getUsers() {
+    return read("users", INITIAL_USERS);
+  },
+
   getCurrentUser() {
-    return read("user", {
-      name: "Pramoda Kumar Pradhan",
-      email: "pramoda@kraya.com",
-      phone: "9876543210",
-      resellerBalance: 1250,
-      sharedProductsCount: 12
-    });
+    const rawVal = localStorage.getItem("kraya_current_user");
+    if (!rawVal || rawVal === "null") return null;
+    try {
+      return JSON.parse(rawVal);
+    } catch(e) {
+      return null;
+    }
   },
 
   updateCurrentUser(user) {
-    write("user", user);
+    // Write active session
+    localStorage.setItem("kraya_current_user", JSON.stringify(user));
+    
+    // Write back to main credentials DB
+    const users = this.getUsers();
+    const idx = users.findIndex(u => u.email === user.email);
+    if (idx !== -1) {
+      users[idx] = { ...users[idx], ...user };
+      write("users", users);
+    }
+    
+    window.dispatchEvent(new Event("kraya_user_updated"));
+  },
+
+  loginUser(email, password) {
+    const users = this.getUsers();
+    const user = users.find(u => u.email === email && u.password === password);
+    if (user) {
+      localStorage.setItem("kraya_current_user", JSON.stringify(user));
+      window.dispatchEvent(new Event("kraya_user_updated"));
+      return true;
+    }
+    return false;
+  },
+
+  registerUser(name, email, password, phone) {
+    const users = this.getUsers();
+    const exists = users.some(u => u.email === email);
+    if (exists) return false;
+    
+    const newUser = {
+      name,
+      email,
+      password,
+      phone,
+      resellerBalance: 0,
+      sharedProductsCount: 0,
+      superCoins: 100 // Welcome bonus SuperCoins!
+    };
+    
+    users.push(newUser);
+    write("users", users);
+    
+    // Auto login
+    localStorage.setItem("kraya_current_user", JSON.stringify(newUser));
+    window.dispatchEvent(new Event("kraya_user_updated"));
+    return true;
+  },
+
+  logoutUser() {
+    localStorage.setItem("kraya_current_user", "null");
     window.dispatchEvent(new Event("kraya_user_updated"));
   }
 };

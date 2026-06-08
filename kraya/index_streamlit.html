@@ -1361,7 +1361,7 @@ footer {
           
           <a href="#profile" class="action-btn">
             <i data-lucide="user"></i>
-            <span>Profile</span>
+            <span id="header-profile-text">Profile</span>
           </a>
           
           <a href="#profile?tab=wishlist" class="action-btn">
@@ -1982,6 +1982,18 @@ const INITIAL_ADDRESSES = [
   }
 ];
 
+const INITIAL_USERS = [
+  {
+    name: "Pramoda Kumar Pradhan",
+    email: "pramoda@kraya.com",
+    password: "user123",
+    phone: "9876543210",
+    resellerBalance: 1250,
+    sharedProductsCount: 12,
+    superCoins: 120
+  }
+];
+
 // Helper to write to LocalStorage
 function write(key, data) {
   localStorage.setItem(`kraya_${key}`, JSON.stringify(data));
@@ -2011,13 +2023,11 @@ const db = {
     read("wishlist", []);
     read("orders", []);
     read("addresses", INITIAL_ADDRESSES);
-    read("user", {
-      name: "Pramoda Kumar Pradhan",
-      email: "pramoda@kraya.com",
-      phone: "9876543210",
-      resellerBalance: 1250, // Reseller total earnings
-      sharedProductsCount: 12
-    });
+    read("users", INITIAL_USERS);
+    // current_user is null initially to force login
+    if (localStorage.getItem("kraya_current_user") === null) {
+      localStorage.setItem("kraya_current_user", "null");
+    }
   },
 
   // Products
@@ -2068,6 +2078,35 @@ const db = {
     const filtered = products.filter(p => p.id !== Number(id));
     write("products", filtered);
     return true;
+  },
+
+  // Submit product review
+  submitReview(productId, rating, comment, userName) {
+    const products = this.getProducts();
+    const index = products.findIndex(p => p.id === Number(productId));
+    if (index !== -1) {
+      const p = products[index];
+      const today = new Date().toISOString().split("T")[0];
+      const newReview = {
+        name: userName || "Anonymous",
+        rating: Number(rating),
+        comment: comment,
+        date: today
+      };
+      
+      p.reviews = p.reviews || [];
+      p.reviews.unshift(newReview);
+      p.reviewsCount = (p.reviewsCount || 0) + 1;
+      
+      // Recompute average rating
+      const sum = p.reviews.reduce((acc, r) => acc + r.rating, 0);
+      p.rating = Number((sum / p.reviews.length).toFixed(1));
+      
+      products[index] = p;
+      write("products", products);
+      return true;
+    }
+    return false;
   },
 
   // Cart
@@ -2164,11 +2203,18 @@ const db = {
 
   // Orders
   getOrders() {
-    return read("orders", []);
+    // Return only orders belonging to active user if logged in
+    const user = this.getCurrentUser();
+    const allOrders = read("orders", []);
+    if (!user) return [];
+    return allOrders.filter(o => o.userEmail === user.email);
   },
 
   createOrder(orderData) {
-    const orders = this.getOrders();
+    const user = this.getCurrentUser();
+    if (!user) return null;
+    
+    const allOrders = read("orders", []);
     const nextId = "KR" + Math.floor(100000 + Math.random() * 900000);
     const date = new Date().toISOString().split("T")[0];
     
@@ -2180,18 +2226,30 @@ const db = {
       paymentMethod: orderData.paymentMethod,
       address: orderData.address,
       totals: orderData.totals,
-      resellerMargin: orderData.resellerMargin || 0
+      resellerMargin: orderData.resellerMargin || 0,
+      userEmail: user.email
     };
 
-    orders.unshift(newOrder); // Newest order first
-    write("orders", orders);
+    allOrders.unshift(newOrder); // Newest order first
+    write("orders", allOrders);
 
-    // Update user balance if there was a reseller margin
+    // Update user stats (reseller balance, superCoins deduction & addition)
     if (orderData.resellerMargin > 0) {
-      const user = this.getCurrentUser();
       user.resellerBalance += Number(orderData.resellerMargin);
-      this.updateCurrentUser(user);
     }
+    
+    // Deduct coins if applied
+    if (orderData.totals.coinsRedeemed > 0) {
+      user.superCoins = Math.max(0, user.superCoins - orderData.totals.coinsRedeemed);
+    }
+    
+    // Earn coins (5 SuperCoins per 100 spent)
+    const coinsEarned = Math.floor(orderData.totals.finalAmount / 20);
+    user.superCoins += coinsEarned;
+    newOrder.superCoinsEarned = coinsEarned;
+    
+    // Save order data updates back to DB
+    this.updateCurrentUser(user);
 
     return newOrder;
   },
@@ -2222,25 +2280,321 @@ const db = {
     return addresses;
   },
 
-  // User details
+  // User details & Authentication Management
+  getUsers() {
+    return read("users", INITIAL_USERS);
+  },
+
   getCurrentUser() {
-    return read("user", {
-      name: "Pramoda Kumar Pradhan",
-      email: "pramoda@kraya.com",
-      phone: "9876543210",
-      resellerBalance: 1250,
-      sharedProductsCount: 12
-    });
+    const rawVal = localStorage.getItem("kraya_current_user");
+    if (!rawVal || rawVal === "null") return null;
+    try {
+      return JSON.parse(rawVal);
+    } catch(e) {
+      return null;
+    }
   },
 
   updateCurrentUser(user) {
-    write("user", user);
+    // Write active session
+    localStorage.setItem("kraya_current_user", JSON.stringify(user));
+    
+    // Write back to main credentials DB
+    const users = this.getUsers();
+    const idx = users.findIndex(u => u.email === user.email);
+    if (idx !== -1) {
+      users[idx] = { ...users[idx], ...user };
+      write("users", users);
+    }
+    
+    window.dispatchEvent(new Event("kraya_user_updated"));
+  },
+
+  loginUser(email, password) {
+    const users = this.getUsers();
+    const user = users.find(u => u.email === email && u.password === password);
+    if (user) {
+      localStorage.setItem("kraya_current_user", JSON.stringify(user));
+      window.dispatchEvent(new Event("kraya_user_updated"));
+      return true;
+    }
+    return false;
+  },
+
+  registerUser(name, email, password, phone) {
+    const users = this.getUsers();
+    const exists = users.some(u => u.email === email);
+    if (exists) return false;
+    
+    const newUser = {
+      name,
+      email,
+      password,
+      phone,
+      resellerBalance: 0,
+      sharedProductsCount: 0,
+      superCoins: 100 // Welcome bonus SuperCoins!
+    };
+    
+    users.push(newUser);
+    write("users", users);
+    
+    // Auto login
+    localStorage.setItem("kraya_current_user", JSON.stringify(newUser));
+    window.dispatchEvent(new Event("kraya_user_updated"));
+    return true;
+  },
+
+  logoutUser() {
+    localStorage.setItem("kraya_current_user", "null");
     window.dispatchEvent(new Event("kraya_user_updated"));
   }
 };
 
 
 // --- COMPONENTS ---
+
+// --- COMPONENT: login ---
+// Kraya Authentication Page Component (Login / Register / SMS OTP)
+
+
+
+let loginMode = 'signin'; // signin, signup, phone_otp
+let smsOtpSent = false;
+let generatedOtp = '';
+
+function render_login(container, params) {
+  // Check if already logged in, redirect to catalog or profile
+  const user = db.getCurrentUser();
+  if (user) {
+    navigateToRoute('#profile');
+    return;
+  }
+  
+  renderForm(container);
+}
+
+function renderForm(container) {
+  let innerHtml = '';
+  
+  if (loginMode === 'signin') {
+    innerHtml = `
+      <h2 style="font-size: 22px; font-weight: 800; margin-bottom: 8px; text-align: center;">Sign In to Kraya</h2>
+      <p style="color: var(--text-muted); font-size: 13px; text-align: center; margin-bottom: 24px;">Access your orders, wishlist, and SuperCoins balance.</p>
+      
+      <form id="auth-signin-form" style="display: flex; flex-direction: column; gap: 16px;">
+        <div class="form-group" style="margin-bottom:0;">
+          <label class="form-label">Email Address</label>
+          <input type="email" class="form-control" id="signin-email" placeholder="example@kraya.com" required value="pramoda@kraya.com">
+        </div>
+        
+        <div class="form-group" style="margin-bottom:0;">
+          <label class="form-label">Password</label>
+          <input type="password" class="form-control" id="signin-password" placeholder="••••••••" required value="user123">
+        </div>
+        
+        <button type="submit" class="btn-large btn-buy-now w-100" style="margin-top: 10px;">Sign In</button>
+      </form>
+      
+      <div style="margin-top: 24px; text-align: center; font-size: 13px; color: var(--text-muted); display:flex; flex-direction:column; gap:12px;">
+        <a href="javascript:void(0)" id="switch-to-otp" style="color: var(--secondary-color); font-weight: 600;">Or Login with Mobile OTP</a>
+        <div>New to Kraya? <a href="javascript:void(0)" id="switch-to-signup" style="color: var(--primary-color); font-weight: 700;">Create an Account</a></div>
+      </div>
+    `;
+  } else if (loginMode === 'signup') {
+    innerHtml = `
+      <h2 style="font-size: 22px; font-weight: 800; margin-bottom: 8px; text-align: center;">Create Account</h2>
+      <p style="color: var(--text-muted); font-size: 13px; text-align: center; margin-bottom: 24px;">Join Kraya & get a <strong style="color: var(--success);">🎁 100 SuperCoins welcome bonus!</strong></p>
+      
+      <form id="auth-signup-form" style="display: flex; flex-direction: column; gap: 16px;">
+        <div class="form-group" style="margin-bottom:0;">
+          <label class="form-label">Full Name</label>
+          <input type="text" class="form-control" id="signup-name" placeholder="Pramoda Kumar" required>
+        </div>
+        
+        <div class="form-group" style="margin-bottom:0;">
+          <label class="form-label">Email Address</label>
+          <input type="email" class="form-control" id="signup-email" placeholder="name@email.com" required>
+        </div>
+
+        <div class="form-group" style="margin-bottom:0;">
+          <label class="form-label">Mobile Number</label>
+          <input type="text" class="form-control" id="signup-phone" placeholder="9876543210" maxlength="10" required>
+        </div>
+        
+        <div class="form-group" style="margin-bottom:0;">
+          <label class="form-label">Create Password</label>
+          <input type="password" class="form-control" id="signup-password" placeholder="At least 6 characters" minlength="6" required>
+        </div>
+        
+        <button type="submit" class="btn-large btn-buy-now w-100" style="margin-top: 10px;">Register & Claim Coins</button>
+      </form>
+      
+      <div style="margin-top: 24px; text-align: center; font-size: 13px; color: var(--text-muted);">
+        Already have an account? <a href="javascript:void(0)" id="switch-to-signin" style="color: var(--primary-color); font-weight: 700;">Sign In</a>
+      </div>
+    `;
+  } else if (loginMode === 'phone_otp') {
+    innerHtml = `
+      <h2 style="font-size: 22px; font-weight: 800; margin-bottom: 8px; text-align: center;">OTP Login</h2>
+      <p style="color: var(--text-muted); font-size: 13px; text-align: center; margin-bottom: 24px;">Enter your mobile number to receive a 4-digit verification code.</p>
+      
+      <form id="auth-otp-form" style="display: flex; flex-direction: column; gap: 16px;">
+        <div class="form-group" style="margin-bottom:0;">
+          <label class="form-label">Mobile Number</label>
+          <div style="position: relative; display: flex; align-items: center;">
+            <span style="position: absolute; left: 16px; font-weight: 700; color: var(--text-muted);">+91</span>
+            <input type="text" class="form-control" id="otp-phone" style="padding-left: 56px;" placeholder="9876543210" maxlength="10" required ${smsOtpSent ? 'disabled' : ''}>
+          </div>
+        </div>
+        
+        ${smsOtpSent ? `
+          <div style="background-color: var(--success-bg); color: var(--success); padding: 12px; border-radius: 6px; font-size: 12px; font-weight: 700; text-align: center; border: 1px solid rgba(3, 166, 133, 0.2);">
+            💬 SMS Sent: Verification OTP is <strong>${generatedOtp}</strong>
+          </div>
+          <div class="form-group" style="margin-bottom:0;">
+            <label class="form-label">Enter 4-Digit OTP Code</label>
+            <input type="text" class="form-control" id="otp-code" placeholder="Enter code" maxlength="4" required style="text-align: center; font-size: 18px; font-weight: 800; letter-spacing: 8px;">
+          </div>
+        ` : ''}
+        
+        <button type="submit" class="btn-large btn-buy-now w-100" style="margin-top: 10px;">
+          ${smsOtpSent ? 'Verify & Login' : 'Send Verification OTP'}
+        </button>
+      </form>
+      
+      <div style="margin-top: 24px; text-align: center; font-size: 13px; color: var(--text-muted);">
+        <a href="javascript:void(0)" id="switch-to-signin" style="color: var(--primary-color); font-weight: 700;">Back to Email Login</a>
+      </div>
+    `;
+  }
+  
+  container.innerHTML = `
+    <div class="container" style="display: flex; align-items: center; justify-content: center; padding: 40px 0;">
+      <div style="background-color: #fff; width: 440px; border-radius: 16px; padding: 36px; box-shadow: var(--shadow-lg); border: 1px solid var(--border-light);">
+        ${innerHtml}
+      </div>
+    </div>
+  `;
+  
+  wireUpAuthEvents(container);
+}
+
+function wireUpAuthEvents(container) {
+  // Switche link bindings
+  const signinBtn = document.getElementById("switch-to-signin");
+  if (signinBtn) {
+    signinBtn.addEventListener("click", () => {
+      loginMode = 'signin';
+      smsOtpSent = false;
+      renderForm(container);
+    });
+  }
+  
+  const signupBtn = document.getElementById("switch-to-signup");
+  if (signupBtn) {
+    signupBtn.addEventListener("click", () => {
+      loginMode = 'signup';
+      renderForm(container);
+    });
+  }
+  
+  const otpBtn = document.getElementById("switch-to-otp");
+  if (otpBtn) {
+    otpBtn.addEventListener("click", () => {
+      loginMode = 'phone_otp';
+      smsOtpSent = false;
+      renderForm(container);
+    });
+  }
+  
+  // Submit Sign In Form
+  const signinForm = document.getElementById("auth-signin-form");
+  if (signinForm) {
+    signinForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const email = document.getElementById("signin-email").value.trim();
+      const password = document.getElementById("signin-password").value;
+      
+      const ok = db.loginUser(email, password);
+      if (ok) {
+        // Successful login, trigger refresh and route to catalog or cart check page
+        window.location.hash = '#profile';
+        window.location.reload();
+      } else {
+        alert("Invalid Email or Password! Try pramoda@kraya.com / user123");
+      }
+    });
+  }
+  
+  // Submit Sign Up Form
+  const signupForm = document.getElementById("auth-signup-form");
+  if (signupForm) {
+    signupForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const name = document.getElementById("signup-name").value.trim();
+      const email = document.getElementById("signup-email").value.trim();
+      const phone = document.getElementById("signup-phone").value.trim();
+      const password = document.getElementById("signup-password").value;
+      
+      const success = db.registerUser(name, email, password, phone);
+      if (success) {
+        alert("Welcome to Kraya! 100 Welcome SuperCoins have been credited to your account.");
+        window.location.hash = '#profile';
+        window.location.reload();
+      } else {
+        alert("An account with this email address already exists!");
+      }
+    });
+  }
+  
+  // Submit OTP Form
+  const otpForm = document.getElementById("auth-otp-form");
+  if (otpForm) {
+    otpForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      
+      if (!smsOtpSent) {
+        // Send SMS OTP process
+        const phone = document.getElementById("otp-phone").value.trim();
+        if (phone.length !== 10 || isNaN(phone)) {
+          alert("Please enter a valid 10-digit mobile number!");
+          return;
+        }
+        
+        // Mock generation
+        generatedOtp = Math.floor(1000 + Math.random() * 9000).toString();
+        smsOtpSent = true;
+        renderForm(container);
+      } else {
+        // Verify OTP code
+        const codeInput = document.getElementById("otp-code").value.trim();
+        if (codeInput === generatedOtp) {
+          // Find or create account dynamically
+          const phone = document.getElementById("otp-phone").value;
+          const users = db.getUsers();
+          let user = users.find(u => u.phone === phone);
+          
+          if (!user) {
+            // Auto register
+            const autoEmail = `${phone}@kraya.com`;
+            db.registerUser(`User ${phone.slice(-4)}`, autoEmail, "otp_login_pass", phone);
+          } else {
+            // Log in
+            db.loginUser(user.email, user.password);
+          }
+          
+          alert("OTP verified successfully! Logged in.");
+          window.location.hash = '#profile';
+          window.location.reload();
+        } else {
+          alert("Incorrect verification code! Please check the mock SMS badge code and try again.");
+        }
+      }
+    });
+  }
+}
+
 
 // --- COMPONENT: reseller ---
 // Kraya Reseller Share & Earnings Manager
@@ -3220,6 +3574,7 @@ let paymentMethod = 'cod'; // cod, upi, card
 let appliedDiscount = 0;
 let promoCodeText = '';
 let isResellerOrder = false;
+let redeemCoinsChecked = false;
 
 function render_cart(container, params) {
   const cartItems = db.getCart();
@@ -3248,9 +3603,16 @@ function recalcTotals(cartItems) {
     originalTotal += item.originalPrice * item.quantity;
   });
   
+  const user = db.getCurrentUser();
+  const coinsBalance = user ? user.superCoins : 0;
+  
+  // Redeem SuperCoins rule: 1 Coin = 1 rupee. Max 50 coins or 10% of cart value
+  const maxRedeemableCoins = Math.min(coinsBalance, 50, Math.floor(itemTotal * 0.1));
+  const coinsRedeemed = redeemCoinsChecked ? maxRedeemableCoins : 0;
+  
   const discountSavings = originalTotal - itemTotal;
   const onlineDiscount = (paymentMethod !== 'cod') ? 15 : 0; // ₹15 discount on UPI/Card payments
-  const finalAmount = Math.max(0, itemTotal - appliedDiscount - onlineDiscount);
+  const finalAmount = Math.max(0, itemTotal - appliedDiscount - onlineDiscount - coinsRedeemed);
   
   const totals = {
     itemTotal,
@@ -3258,6 +3620,9 @@ function recalcTotals(cartItems) {
     discountSavings,
     couponDiscount: appliedDiscount,
     onlineDiscount,
+    coinsRedeemed,
+    maxRedeemableCoins,
+    coinsBalance,
     finalAmount
   };
   
@@ -3422,8 +3787,21 @@ function renderCheckoutShell(totals, cartItems) {
             <span>-₹${totals.discountSavings}</span>
           </div>
           
+          <!-- SuperCoins redemption slider (Flipkart specialty) -->
+          ${totals.coinsBalance > 0 ? `
+            <div style="border-top: 1px dashed var(--border-light); border-bottom: 1px dashed var(--border-light); padding: 12px 0; margin-bottom: 12px; margin-top: 12px;">
+              <label class="d-flex align-center gap-1" style="cursor: pointer; font-size: 13px; font-weight: 700; color: var(--secondary-color);">
+                <input type="checkbox" id="checkout-coins-checkbox" style="width: 16px; height: 16px; accent-color: var(--secondary-color);" ${redeemCoinsChecked ? 'checked' : ''}>
+                Redeem up to ${totals.maxRedeemableCoins} SuperCoins (Save ₹${totals.maxRedeemableCoins})
+              </label>
+              <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px; display:flex; align-items:center; gap:4px;">
+                <i data-lucide="coins" style="width:14px; color: gold; fill: gold;"></i> Wallet Balance: <strong>${totals.coinsBalance} Coins</strong>
+              </div>
+            </div>
+          ` : ''}
+          
           <!-- Coupon Application Form -->
-          <div style="border-top: 1px solid var(--border-light); border-bottom: 1px solid var(--border-light); padding: 15px 0; margin: 15px 0;">
+          <div style="border-bottom: 1px solid var(--border-light); padding-bottom: 15px; margin-bottom: 15px;">
             <div style="font-size: 12px; font-weight: 700; margin-bottom: 8px;">Apply Discount Coupon</div>
             <div class="d-flex gap-1">
               <input type="text" class="form-control" id="checkout-coupon-input" placeholder="e.g. KRAYANEW10" style="padding: 8px 12px; font-size: 13px;" value="${promoCodeText}">
@@ -3444,6 +3822,12 @@ function renderCheckoutShell(totals, cartItems) {
               <span>-₹${totals.onlineDiscount}</span>
             </div>` : ''}
             
+          ${totals.coinsRedeemed > 0 ? `
+            <div class="price-row-detail" style="color: var(--success); font-weight: 600;">
+              <span>SuperCoins Discount</span>
+              <span>-₹${totals.coinsRedeemed}</span>
+            </div>` : ''}
+            
           <div class="price-row-detail">
             <span>Delivery Charges</span>
             <span style="color: var(--success); font-weight: 700;">FREE</span>
@@ -3455,7 +3839,7 @@ function renderCheckoutShell(totals, cartItems) {
           </div>
           
           <div style="background-color: var(--success-bg); color: var(--success); text-align: center; padding: 10px; border-radius: 6px; font-size: 12px; font-weight: 700; margin-top: 20px;">
-            🎉 You save ₹${totals.discountSavings + totals.couponDiscount + totals.onlineDiscount} on this order!
+            🎉 You save ₹${totals.discountSavings + totals.couponDiscount + totals.onlineDiscount + totals.coinsRedeemed} on this order!
           </div>
         </aside>
         
@@ -3743,6 +4127,15 @@ function wireUpCheckoutEvents(totals, cartItems) {
     });
   }
   
+  // SuperCoins checkbox event toggle
+  const coinsCheckbox = document.getElementById("checkout-coins-checkbox");
+  if (coinsCheckbox) {
+    coinsCheckbox.addEventListener("change", (e) => {
+      redeemCoinsChecked = e.target.checked;
+      recalcTotals(cartItems);
+    });
+  }
+  
   // Place Order Submit click
   const placeOrderBtn = document.getElementById("checkout-place-order-btn");
   if (placeOrderBtn) {
@@ -3785,6 +4178,7 @@ function wireUpCheckoutEvents(totals, cartItems) {
       activeStep = 4;
       appliedDiscount = 0;
       promoCodeText = '';
+      redeemCoinsChecked = false; // reset
       
       // Fire Confetti!
       fireCheckoutConfetti();
@@ -3831,10 +4225,18 @@ function renderConfirmationView(order) {
             <span>Total Paid Amount:</span>
             <span>₹${order.totals.finalAmount}</span>
           </div>
+          ${order.totals.coinsRedeemed > 0 ? `
+            <div style="display:flex; justify-content:space-between; color: var(--success); font-weight:600; margin-top:4px;">
+              <span>SuperCoins Redeemed:</span>
+              <span>-${order.totals.coinsRedeemed} Coins</span>
+            </div>` : ''}
           ${order.resellerMargin > 0 ? `
             <div style="background-color: rgba(63, 81, 181, 0.05); color: var(--secondary-color); padding: 10px; border-radius: 6px; font-weight: 700; text-align: center; margin-top: 15px; border: 1px solid rgba(63, 81, 181, 0.15);">
               📈 Reseller Margin Earned: ₹${order.resellerMargin} (Will reflect in balance after shipment)
             </div>` : ''}
+          <div style="background-color: var(--success-bg); color: var(--success); padding: 10px; border-radius: 6px; font-weight: 700; text-align: center; margin-top: 15px; border: 1px solid rgba(3, 166, 133, 0.2); display:flex; align-items:center; justify-content:center; gap:6px;">
+            <i data-lucide="coins" style="width:18px; fill:gold; color:gold;"></i> SuperCoins Credited on Order: +${order.superCoinsEarned || 0} Coins!
+          </div>
         </div>
       </div>
       
@@ -3862,6 +4264,7 @@ function fireCheckoutConfetti() {
 
 // --- COMPONENT: profile ---
 // Kraya User Profile & Wishlist Component
+
 
 
 let activeTab = 'orders'; // orders, wishlist, settings
@@ -3901,6 +4304,10 @@ function render_profile(container, params) {
           
           <button class="seller-menu-item ${activeTab === 'settings' ? 'active' : ''}" data-tab="settings">
             <i data-lucide="settings"></i> Profile & Address
+          </button>
+          
+          <button class="seller-menu-item" id="profile-logout-btn" style="color: var(--error); margin-top: 40px; border-top: 1px solid var(--border-light); padding-top: 20px; width: 100%;">
+            <i data-lucide="log-out"></i> Log Out
           </button>
         </aside>
         
@@ -4002,6 +4409,11 @@ function renderOrdersTab(orders) {
                       <div>
                         <h4 style="font-size: 13px; font-weight: 700; line-height:1.4;">${item.name}</h4>
                         <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">Size: <strong>${item.size}</strong> | Qty: <strong>${item.quantity}</strong></div>
+                        <div style="margin-top: 6px;">
+                          <button class="clear-filters-btn write-item-review" data-product-id="${item.productId}" data-product-name="${item.name}" style="font-size: 11px; font-weight: 700; color: var(--primary-color);">
+                            ★ Write a Product Review
+                          </button>
+                        </div>
                       </div>
                     </div>
                     <div style="font-weight: 700; font-size: 14px;">₹${item.price * item.quantity}</div>
@@ -4120,10 +4532,10 @@ function renderSettingsTab(user, addresses) {
         </div>
       </div>
       <div class="stat-card">
-        <div class="stat-icon green"><i data-lucide="user-check"></i></div>
+        <div class="stat-icon green"><i data-lucide="coins" style="color: gold; fill: gold;"></i></div>
         <div class="stat-info">
-          <h3>Active</h3>
-          <p>Reseller Account State</p>
+          <h3>${user.superCoins || 0}</h3>
+          <p>My SuperCoins Wallet</p>
         </div>
       </div>
     </div>
@@ -4176,7 +4588,7 @@ function renderSettingsTab(user, addresses) {
 
 function wireUpProfileEvents(container) {
   // Tab selector clicking switcher
-  container.querySelectorAll(".seller-menu-item").forEach(btn => {
+  container.querySelectorAll(".seller-menu-item[data-tab]").forEach(btn => {
     btn.addEventListener("click", () => {
       container.querySelectorAll(".seller-menu-item").forEach(b => b.classList.remove("active"));
       btn.classList.add("active");
@@ -4196,6 +4608,17 @@ function wireUpProfileEvents(container) {
       }
     });
   });
+  
+  // Bind Logout
+  const logoutBtn = container.querySelector("#profile-logout-btn");
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", () => {
+      db.logoutUser();
+      alert("Logged out successfully!");
+      window.location.hash = '#catalog';
+      window.location.reload();
+    });
+  }
   
   // Setup events on initial tab load
   const contentPane = document.getElementById("profile-tab-content");
@@ -4267,6 +4690,93 @@ function wireUpTabSpecificEvents(contentPane) {
         wireUpTabSpecificEvents(contentPane);
       }
     });
+  });
+  
+  // Write a product review
+  contentPane.querySelectorAll(".write-item-review").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const prodId = btn.dataset.productId;
+      const prodName = btn.dataset.productName;
+      triggerWriteReviewModal(prodId, prodName);
+    });
+  });
+}
+
+function triggerWriteReviewModal(productId, productName) {
+  let selectedRating = 5;
+  
+  const modalHtml = `
+    <div class="modal-header">
+      <h3 class="d-flex align-center gap-1"><i data-lucide="star" style="color: var(--primary-color);"></i> Write Product Review</h3>
+      <button id="review-close-modal" class="action-btn"><i data-lucide="x"></i></button>
+    </div>
+    <form id="submit-review-form">
+      <div class="modal-body" style="display:flex; flex-direction:column; gap:16px;">
+        <div>
+          <h4 style="font-size:14px; font-weight:700;">${productName}</h4>
+          <p style="font-size:12px; color:var(--text-muted); margin-top:2px;">Rate the quality, stitching and delivery experience of this product.</p>
+        </div>
+        
+        <div class="form-group" style="margin-bottom:0;">
+          <label class="form-label">Tap Stars to Rate</label>
+          <div class="d-flex gap-1" style="font-size:24px; color: #ccc;" id="review-stars-container">
+            ${[1,2,3,4,5].map(val => `
+              <i data-lucide="star" class="review-star-item" data-value="${val}" style="cursor:pointer; fill: gold; color: gold; width:28px; height:28px;"></i>
+            `).join('')}
+          </div>
+        </div>
+        
+        <div class="form-group" style="margin-bottom:0;">
+          <label class="form-label">Review Comment</label>
+          <textarea class="form-control" id="review-comment" rows="4" placeholder="Fabric is soft, color exactly as shown. Highly recommended!" required></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-large btn-cart-add" style="padding:10px 20px;" id="review-cancel-btn">Cancel</button>
+        <button type="submit" class="btn-large btn-buy-now" style="padding:10px 20px;">Submit Review</button>
+      </div>
+    </form>
+  `;
+  
+  openModal(modalHtml);
+  
+  // Stars selection click handling
+  const starContainer = document.getElementById("review-stars-container");
+  const stars = starContainer.querySelectorAll(".review-star-item");
+  
+  stars.forEach(star => {
+    star.addEventListener("click", () => {
+      const val = Number(star.dataset.value);
+      selectedRating = val;
+      
+      // Update stars color
+      stars.forEach(s => {
+        const sVal = Number(s.dataset.value);
+        if (sVal <= val) {
+          s.style.fill = 'gold';
+          s.style.color = 'gold';
+        } else {
+          s.style.fill = 'none';
+          s.style.color = '#ccc';
+        }
+      });
+    });
+  });
+  
+  // Close Modal Actions
+  document.getElementById("review-close-modal").addEventListener("click", closeModal);
+  document.getElementById("review-cancel-btn").addEventListener("click", closeModal);
+  
+  // Submit Review Handler
+  document.getElementById("submit-review-form").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const comment = document.getElementById("review-comment").value.trim();
+    const user = db.getCurrentUser();
+    
+    db.submitReview(productId, selectedRating, comment, user ? user.name : 'Anonymous');
+    alert("Thank you! Your product review has been submitted successfully.");
+    closeModal();
+    window.location.reload();
   });
 }
 
@@ -4685,6 +5195,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // Render Global Components
   renderNavigation();
   updateBadges();
+  updateHeaderProfile();
   setupGlobalSearch();
   setupCartDrawer();
   setupUniversalModal();
@@ -4701,6 +5212,10 @@ document.addEventListener("DOMContentLoaded", () => {
   // Listener events
   window.addEventListener("kraya_cart_updated", updateBadges);
   window.addEventListener("kraya_wishlist_updated", updateBadges);
+  window.addEventListener("kraya_user_updated", () => {
+    updateBadges();
+    updateHeaderProfile();
+  });
   
   // Become a supplier modal trigger
   document.getElementById("header-supplier-btn").addEventListener("click", triggerSupplierLogin);
@@ -4777,6 +5292,18 @@ function updateBadges() {
     wishlistBadge.style.display = "block";
   } else {
     wishlistBadge.style.display = "none";
+  }
+}
+
+// Update profile text in top navigation bar
+function updateHeaderProfile() {
+  const profileText = document.getElementById("header-profile-text");
+  if (!profileText) return;
+  const user = db.getCurrentUser();
+  if (user) {
+    profileText.textContent = user.name.split(' ')[0]; // first name
+  } else {
+    profileText.textContent = "Sign In";
   }
 }
 
@@ -5104,9 +5631,19 @@ function handleRouting() {
     const id = route.substring(9);
     loadComponent('detail', { id });
   } else if (route === '#checkout') {
+    if (!db.getCurrentUser()) {
+      window.location.hash = '#login';
+      return;
+    }
     loadComponent('cart', { step: 'checkout' });
   } else if (route === '#profile') {
+    if (!db.getCurrentUser()) {
+      window.location.hash = '#login';
+      return;
+    }
     loadComponent('profile', params);
+  } else if (route === '#login') {
+    loadComponent('login', params);
   } else if (route === '#seller') {
     loadComponent('seller', params);
   } else {
@@ -5128,6 +5665,8 @@ async function loadComponent(componentName, params) {
       render_catalog(viewport, params);
     } else if (componentName === 'detail') {
       render_detail(viewport, params);
+    } else if (componentName === 'login') {
+      render_login(viewport, params);
     } else if (componentName === 'cart') {
       render_cart(viewport, params);
     } else if (componentName === 'profile') {
