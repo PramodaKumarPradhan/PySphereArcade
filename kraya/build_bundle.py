@@ -18,9 +18,9 @@ def build_bundle():
     # Clean export statement from db.js
     db_content = re.sub(r'export const db =', 'const db =', db_content)
     
-    # Rewrite product image paths to point to absolute GitHub Pages URLs
+    # Rewrite product image paths to point to absolute GitHub Pages/Raw URLs
     # so they render perfectly inside any sandboxed iframe
-    github_assets_url = "https://pramodakumarpradhan.github.io/PySphereArcade/kraya/assets/product_images/"
+    github_assets_url = "https://raw.githubusercontent.com/PramodaKumarPradhan/PySphereArcade/main/kraya/assets/product_images/"
     db_content = db_content.replace("assets/product_images/", github_assets_url)
     
     # 3. Read Components
