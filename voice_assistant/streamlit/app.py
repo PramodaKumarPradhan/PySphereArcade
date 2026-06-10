@@ -86,65 +86,83 @@ for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-# ── USER INPUT & PROCESSING ────────────────────────────────────────────────
-if user_query := st.chat_input("Tulis sesuatu... / Speak or type a command..."):
-    # Display user query
-    with st.chat_message("user"):
-        st.markdown(user_query)
+# ── USER INPUT FORM (INLINE) ──────────────────────────────────────────────
+# We use st.form instead of st.chat_input because some corporate web browsers 
+# block absolute-positioned overlays at the bottom of the page.
+with st.form("chat_form", clear_on_submit=True):
+    user_query = st.text_input(
+        "Speak or type a command...",
+        placeholder="Tulis sesuatu... / Type a command here...",
+        label_visibility="collapsed"
+    )
+    submit_button = st.form_submit_button("Send Command 🚀")
+
+if submit_button and user_query.strip():
+    # Append user message to history
     st.session_state.messages.append({"role": "user", "content": user_query})
 
-    # 1. Detect input language
-    detected_lang = translator.detect_language(user_query)
+    # Rerun the message display to show user's text immediately
+    st.rerun()
+
+# ── PROCESS LAST MESSAGE IF FROM USER ─────────────────────────────────────
+# This pattern ensures the processing occurs on rerun and registers correctly.
+if st.session_state.messages[-1]["role"] == "user":
+    last_query = st.session_state.messages[-1]["content"]
     
-    # 2. Translate query to English for processing
-    normalized_query = user_query.strip().lower()
-    if detected_lang == 'hi':
-        normalized_query = translator.hindi_to_english_command(user_query)
-    elif detected_lang == 'ms':
-        normalized_query = translator.translate(user_query, src='ms', dest='en')
+    with st.spinner("Thinking..."):
+        # 1. Detect input language
+        detected_lang = translator.detect_language(last_query)
+        
+        # 2. Translate query to English for processing
+        normalized_query = last_query.strip().lower()
+        if detected_lang == 'hi':
+            normalized_query = translator.hindi_to_english_command(last_query)
+        elif detected_lang == 'ms':
+            normalized_query = translator.translate(last_query, src='ms', dest='en')
 
-    # 3. Formulate the response
-    response_en = ""
+        # 3. Formulate the response
+        response_en = ""
 
-    # Rule-based routing simulation
-    if any(w in normalized_query for w in ["hello", "hi", "hey", "apa khabar", "namaste"]):
-        response_en = "Hello! Hope you are doing great. How can I assist you?"
-    elif "time" in normalized_query:
-        now = datetime.datetime.now().strftime("%I:%M %p")
-        response_en = f"The current time is {now}."
-    elif "date" in normalized_query:
-        today = datetime.datetime.now().strftime("%A, %d %B %Y")
-        response_en = f"Today is {today}."
-    elif "notepad" in normalized_query:
-        response_en = "Opening Notepad... (Simulated: Notepad command received in the cloud)."
-    elif "volume" in normalized_query or "mute" in normalized_query:
-        response_en = "Adjusting volume... (Simulated: Audio command received in the cloud)."
-    elif "screenshot" in normalized_query:
-        response_en = "Taking screenshot... (Simulated: Capture command received in the cloud)."
-    else:
-        # Get Gemini key
-        gemini_key = ""
-        if has_secret:
-            gemini_key = st.secrets["GEMINI_API_KEY"]
-        elif has_env:
-            gemini_key = os.environ["GEMINI_API_KEY"]
-
-        if gemini_key:
-            try:
-                import google.generativeai as genai
-                genai.configure(api_key=gemini_key)
-                model = genai.GenerativeModel("gemini-1.5-flash")
-                response = model.generate_content(user_query)
-                response_en = response.text
-            except Exception as e:
-                response_en = f"I'm not sure how to handle that. (Error calling cloud AI: {e})"
+        # Rule-based routing simulation
+        if any(w in normalized_query for w in ["hello", "hi", "hey", "apa khabar", "namaste"]):
+            response_en = "Hello! Hope you are doing great. How can I assist you?"
+        elif "time" in normalized_query:
+            now = datetime.datetime.now().strftime("%I:%M %p")
+            response_en = f"The current time is {now}."
+        elif "date" in normalized_query:
+            today = datetime.datetime.now().strftime("%A, %d %B %Y")
+            response_en = f"Today is {today}."
+        elif "notepad" in normalized_query:
+            response_en = "Opening Notepad... (Simulated: Notepad command received in the cloud)."
+        elif "volume" in normalized_query or "mute" in normalized_query:
+            response_en = "Adjusting volume... (Simulated: Audio command received in the cloud)."
+        elif "screenshot" in normalized_query:
+            response_en = "Taking screenshot... (Simulated: Capture command received in the cloud)."
         else:
-            response_en = "I received your command. In local mode, I would execute this on your laptop!"
+            # Get Gemini key
+            gemini_key = ""
+            if has_secret:
+                gemini_key = st.secrets["GEMINI_API_KEY"]
+            elif has_env:
+                gemini_key = os.environ["GEMINI_API_KEY"]
 
-    # 4. Translate response back to user's language
-    final_response = translator.get_response_in_language(response_en, detected_lang)
+            if gemini_key:
+                try:
+                    import google.generativeai as genai
+                    genai.configure(api_key=gemini_key)
+                    model = genai.GenerativeModel("gemini-1.5-flash")
+                    response = model.generate_content(last_query)
+                    response_en = response.text
+                except Exception as e:
+                    response_en = f"I'm not sure how to handle that. (Error calling cloud AI: {e})"
+            else:
+                response_en = "I received your command. In local mode, I would execute this on your laptop!"
 
-    # Display assistant response
-    with st.chat_message("assistant"):
-        st.markdown(final_response)
-    st.session_state.messages.append({"role": "assistant", "content": final_response})
+        # 4. Translate response back to user's language
+        final_response = translator.get_response_in_language(response_en, detected_lang)
+
+        # Append assistant response to history
+        st.session_state.messages.append({"role": "assistant", "content": final_response})
+        
+        # Rerun to show assistant response
+        st.rerun()
