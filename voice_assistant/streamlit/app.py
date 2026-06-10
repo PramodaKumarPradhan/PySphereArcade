@@ -34,6 +34,43 @@ config = {
 }
 translator = LanguageTranslator(config)
 
+# ── SIDEBAR DEBUG PANEL ──────────────────────────────────────────────────
+st.sidebar.title("🛠️ System Debugger")
+
+# Check secrets
+has_secret = False
+secret_keys = []
+secrets_error = None
+
+try:
+    if st.secrets:
+        secret_keys = list(st.secrets.keys())
+        if "GEMINI_API_KEY" in st.secrets and st.secrets["GEMINI_API_KEY"].strip():
+            has_secret = True
+except Exception as e:
+    secrets_error = str(e)
+
+# Check environment variables
+has_env = "GEMINI_API_KEY" in os.environ and os.environ["GEMINI_API_KEY"].strip()
+
+# Status Display
+if has_secret:
+    st.sidebar.success("🔑 API Key: Found in Secrets!")
+elif has_env:
+    st.sidebar.success("🔑 API Key: Found in Environment!")
+else:
+    st.sidebar.error("❌ API Key: Not Found")
+    st.sidebar.warning(
+        "Please check your Streamlit Secrets. Ensure you wrote it exactly as: \n"
+        '`GEMINI_API_KEY = "your_key_here"`'
+    )
+
+# List found keys (safe)
+if secret_keys:
+    st.sidebar.write("Available Secret Keys:", secret_keys)
+if secrets_error:
+    st.sidebar.write("Secrets Error:", secrets_error)
+
 # ── HEADER ───────────────────────────────────────────────────────────────
 st.title("🎙️ ARIA — Conversational Assistant")
 st.caption("Multilingual Demo (English + Hindi + Malay) running in the Cloud")
@@ -85,16 +122,12 @@ if user_query := st.chat_input("Tulis sesuatu... / Speak or type a command..."):
     elif "screenshot" in normalized_query:
         response_en = "Taking screenshot... (Simulated: Capture command received in the cloud)."
     else:
-        # Check if Gemini key is available in Streamlit secrets or environment
+        # Get Gemini key
         gemini_key = ""
-        try:
-            if "GEMINI_API_KEY" in st.secrets:
-                gemini_key = st.secrets["GEMINI_API_KEY"]
-        except Exception:
-            pass
-        
-        if not gemini_key:
-            gemini_key = os.environ.get("GEMINI_API_KEY", "")
+        if has_secret:
+            gemini_key = st.secrets["GEMINI_API_KEY"]
+        elif has_env:
+            gemini_key = os.environ["GEMINI_API_KEY"]
 
         if gemini_key:
             try:
