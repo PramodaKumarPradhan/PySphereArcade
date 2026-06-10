@@ -150,9 +150,25 @@ if st.session_state.messages[-1]["role"] == "user":
                 try:
                     import google.generativeai as genai
                     genai.configure(api_key=gemini_key)
-                    model = genai.GenerativeModel("gemini-1.5-flash")
-                    response = model.generate_content(last_query)
-                    response_en = response.text
+                    
+                    response_text = None
+                    last_error = None
+                    
+                    # Try multiple model variants to bypass regional/key restrictions
+                    for model_name in ["gemini-1.5-flash", "gemini-1.5-flash-latest", "gemini-pro"]:
+                        try:
+                            model = genai.GenerativeModel(model_name)
+                            response = model.generate_content(last_query)
+                            response_text = response.text
+                            break
+                        except Exception as inner_e:
+                            last_error = inner_e
+                            continue
+                            
+                    if response_text:
+                        response_en = response_text
+                    else:
+                        raise last_error
                 except Exception as e:
                     response_en = f"I'm not sure how to handle that. (Error calling cloud AI: {e})"
             else:
