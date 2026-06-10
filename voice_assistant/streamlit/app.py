@@ -85,8 +85,17 @@ if user_query := st.chat_input("Tulis sesuatu... / Speak or type a command..."):
     elif "screenshot" in normalized_query:
         response_en = "Taking screenshot... (Simulated: Capture command received in the cloud)."
     else:
-        # Check if Gemini key is available in environment
-        gemini_key = os.environ.get("GEMINI_API_KEY", "")
+        # Check if Gemini key is available in Streamlit secrets or environment
+        gemini_key = ""
+        try:
+            if "GEMINI_API_KEY" in st.secrets:
+                gemini_key = st.secrets["GEMINI_API_KEY"]
+        except Exception:
+            pass
+        
+        if not gemini_key:
+            gemini_key = os.environ.get("GEMINI_API_KEY", "")
+
         if gemini_key:
             try:
                 import google.generativeai as genai
