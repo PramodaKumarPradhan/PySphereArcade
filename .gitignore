@@ -17,3 +17,8 @@ Desktop.ini
 # Temporary logs
 *.log
 test_temp*
+
+# PyInstaller
+build/
+dist/
+*.spec

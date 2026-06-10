@@ -31,13 +31,19 @@ from flask import Flask, jsonify, request, send_from_directory
 from flask_socketio import SocketIO, emit
 from flask_cors import CORS
 
+# Handle paths for PyInstaller bundle
+if getattr(sys, 'frozen', False):
+    base_path = sys._MEIPASS
+else:
+    base_path = os.path.dirname(os.path.abspath(__file__))
+
 # Load configuration
-CONFIG_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'config.json')
+CONFIG_PATH = os.path.join(base_path, 'config.json')
 with open(CONFIG_PATH, 'r', encoding='utf-8') as f:
     config = json.load(f)
 
 # Initialize Flask
-UI_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'ui')
+UI_FOLDER = os.path.join(base_path, 'ui')
 app = Flask(__name__, static_folder=UI_FOLDER, template_folder=UI_FOLDER)
 app.config['SECRET_KEY'] = 'aria-secret-key-2024'
 CORS(app)
