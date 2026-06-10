@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ARIA — Multilingual Voice Assistant | English, Hindi & Malay</title>
+  <meta name="description" content="ARIA - Your intelligent multilingual voice assistant supporting English, Hindi, and Malay for office, home, and laptop tasks." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Noto+Sans+Devanagari:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<!-- ═══════════════════ BACKGROUND ═══════════════════ -->
+<div class="bg-orbs">
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+  <div class="orb orb-3"></div>
+</div>
+
+<!-- ═══════════════════ HEADER ═══════════════════ -->
+<header class="header glass">
+  <div class="header-left">
+    <div class="logo">
+      <div class="logo-icon">
+        <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="20" cy="20" r="19" stroke="url(#lg)" stroke-width="2"/>
+          <path d="M20 8 C20 8 14 14 14 20 C14 26 20 32 20 32 C20 32 26 26 26 20 C26 14 20 8 20 8Z" fill="url(#lg2)" opacity="0.8"/>
+          <circle cx="20" cy="20" r="3" fill="white"/>
+          <defs>
+            <linearGradient id="lg" x1="0" y1="0" x2="40" y2="40">
+              <stop offset="0%" stop-color="#a855f7"/>
+              <stop offset="100%" stop-color="#06b6d4"/>
+            </linearGradient>
+            <linearGradient id="lg2" x1="0" y1="0" x2="40" y2="40">
+              <stop offset="0%" stop-color="#a855f7"/>
+              <stop offset="100%" stop-color="#06b6d4"/>
+            </linearGradient>
+          </defs>
+        </svg>
+      </div>
+      <div>
+        <h1 class="logo-name">ARIA</h1>
+        <p class="logo-sub">Multilingual Voice Assistant</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="header-center">
+    <div class="system-chips" id="systemChips">
+      <div class="chip" id="chipTime">
+        <span class="chip-icon">🕐</span>
+        <span id="liveTime">--:--</span>
+      </div>
+      <div class="chip" id="chipBattery">
+        <span class="chip-icon">🔋</span>
+        <span id="liveBattery">--%</span>
+      </div>
+      <div class="chip" id="chipCpu">
+        <span class="chip-icon">💻</span>
+        <span id="liveCpu">--%</span>
+        <span class="chip-label">CPU</span>
+      </div>
+      <div class="chip" id="chipRam">
+        <span class="chip-icon">🧠</span>
+        <span id="liveRam">--%</span>
+        <span class="chip-label">RAM</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="header-right">
+    <!-- Language Toggle -->
+    <div class="lang-toggle" id="langToggle" title="Toggle Language">
+      <span class="lang-btn active" id="langEN" onclick="setLanguage('en')">EN</span>
+      <div class="lang-divider"></div>
+      <span class="lang-btn" id="langHI" onclick="setLanguage('hi')">हिं</span>
+      <div class="lang-divider"></div>
+      <span class="lang-btn" id="langMS" onclick="setLanguage('ms')">MS</span>
+    </div>
+    <!-- AI Badge -->
+    <div class="ai-badge" id="aiBadge" title="AI Status">
+      <span class="ai-dot"></span>
+      <span id="aiLabel">AI</span>
+    </div>
+    <!-- Settings -->
+    <button class="icon-btn" id="settingsBtn" onclick="toggleSettings()" title="Settings">⚙️</button>
+  </div>
+</header>
+
+<!-- ═══════════════════ MAIN LAYOUT ═══════════════════ -->
+<main class="main-layout">
+
+  <!-- ── LEFT PANEL: Quick Commands ── -->
+  <aside class="left-panel glass">
+    <h3 class="panel-title">Quick Commands</h3>
+    <div class="quick-grid" id="quickGrid">
+      <!-- Populated via JS -->
+    </div>
+  </aside>
+
+  <!-- ── CENTER: Conversation + Voice ── -->
+  <section class="center-panel">
+
+    <!-- Conversation Log -->
+    <div class="chat-container glass" id="chatContainer">
+      <div class="chat-header">
+        <span>Conversation</span>
+        <button class="clear-btn" onclick="clearChat()" title="Clear chat">🗑️ Clear</button>
+      </div>
+      <div class="chat-messages" id="chatMessages">
+        <div class="chat-message aria-msg">
+          <div class="msg-avatar">🎙️</div>
+          <div class="msg-bubble">
+            <p class="msg-text">Selamat Datang! I'm <strong>ARIA</strong>, your multilingual voice assistant.</p>
+            <p class="msg-text">I speak <strong>English</strong>, <strong>Hindi</strong>, and <strong>Malay</strong>. Click the mic to start, or type your command below!</p>
+            <p class="msg-subtext">Say "help" to see all commands • Apa khabar • समय बताओ • Open YouTube</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Voice Visualizer + Mic Button -->
+    <div class="voice-area glass">
+      <div class="visualizer-ring" id="visualizerRing">
+        <canvas id="visualizerCanvas" width="180" height="180"></canvas>
+        <button class="mic-btn" id="micBtn" onclick="toggleListening()" title="Click to speak">
+          <span class="mic-icon" id="micIcon">🎙️</span>
+          <div class="mic-pulse" id="micPulse"></div>
+        </button>
+      </div>
+
+      <div class="voice-status" id="voiceStatus">
+        <div class="status-dot idle" id="statusDot"></div>
+        <span id="statusText">Click mic to speak</span>
+      </div>
+
+      <!-- Text Input -->
+      <div class="text-input-area">
+        <input
+          type="text"
+          id="textInput"
+          class="text-input"
+          placeholder="Type command here... या हिंदी में टाइप करें"
+          autocomplete="off"
+        />
+        <button class="send-btn" id="sendBtn" onclick="sendTextCommand()">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+            <path d="M22 2L11 13" stroke="white" stroke-width="2" stroke-linecap="round"/>
+            <path d="M22 2L15 22L11 13L2 9L22 2Z" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="live-transcript" id="liveTranscript"></div>
+    </div>
+
+  </section>
+
+  <!-- ── RIGHT PANEL: Info + Settings ── -->
+  <aside class="right-panel">
+
+    <!-- ARIA Status Card -->
+    <div class="status-card glass">
+      <div class="status-header">
+        <div class="aria-avatar">
+          <div class="avatar-ring" id="avatarRing">
+            <span class="avatar-face">🤖</span>
+          </div>
+        </div>
+        <div class="status-info">
+          <div class="status-name">ARIA</div>
+          <div class="status-state" id="ariaState">Ready to help</div>
+          <div class="status-langs">🇬🇧 EN + 🇮🇳 HI + 🇲🇾 MS</div>
+        </div>
+      </div>
+      <div class="status-stats">
+        <div class="stat-item">
+          <div class="stat-value" id="statCommands">0</div>
+          <div class="stat-label">Commands</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value" id="statLang">EN</div>
+          <div class="stat-label">Language</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value" id="statSession">00:00</div>
+          <div class="stat-label">Session</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Notification Toast Area -->
+    <div class="notification-area" id="notificationArea"></div>
+
+    <!-- Voice Settings -->
+    <div class="settings-card glass" id="settingsCard" style="display:none;">
+      <h4 class="settings-title">⚙️ Settings</h4>
+
+      <div class="setting-row">
+        <label>Voice Speed</label>
+        <input type="range" id="voiceRate" min="80" max="250" value="165" oninput="updateVoiceRate(this.value)"/>
+        <span id="voiceRateVal">165</span>
+      </div>
+      <div class="setting-row">
+        <label>Volume</label>
+        <input type="range" id="voiceVol" min="0" max="100" value="92" oninput="updateVolume(this.value)"/>
+        <span id="voiceVolVal">92%</span>
+      </div>
+      <div class="setting-row">
+        <label>Default Language</label>
+        <select id="defaultLang" onchange="setLanguage(this.value)">
+          <option value="en">English</option>
+          <option value="hi">हिंदी</option>
+          <option value="ms">Melayu (Malay)</option>
+        </select>
+      </div>
+      <div class="setting-row">
+        <label>Gemini API Key</label>
+        <input type="password" id="geminiKey" placeholder="Enter API key..." class="api-input"/>
+        <button onclick="saveApiKey()" class="save-btn">Save</button>
+      </div>
+      <button class="clear-btn" onclick="clearChat()" style="width:100%;margin-top:8px;">🗑️ Clear Conversation</button>
+    </div>
+
+    <!-- Command Reference -->
+    <div class="cmd-ref glass">
+      <h4 class="cmd-ref-title">💡 Try saying...</h4>
+      <div class="cmd-examples" id="cmdExamples">
+        <!-- Rotated via JS -->
+      </div>
+    </div>
+
+  </aside>
+
+</main>
+
+<!-- ═══════════════════ NOTIFICATION POPUP ═══════════════════ -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- ═══════════════════ SCRIPTS ═══════════════════ -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

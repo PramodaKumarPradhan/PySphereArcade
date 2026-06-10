@@ -1,0 +1,51 @@
+{
+  "assistant": {
+    "name": "Aria",
+    "name_hindi": "आरिया",
+    "version": "1.0.0",
+    "wake_word": "aria",
+    "wake_word_hindi": "आरिया"
+  },
+  "server": {
+    "host": "localhost",
+    "port": 8080,
+    "auto_open_browser": true,
+    "debug": false
+  },
+  "language": {
+    "default": "en",
+    "available": ["en", "hi", "ms"],
+    "recognition_locale_en": "en-IN",
+    "recognition_locale_hi": "hi-IN",
+    "recognition_locale_ms": "ms-MY",
+    "auto_detect": true
+  },
+  "voice": {
+    "tts_engine": "pyttsx3",
+    "rate_en": 165,
+    "rate_hi": 145,
+    "volume": 0.92,
+    "pitch": 1.0,
+    "gender": "female"
+  },
+  "ai": {
+    "gemini_api_key": "",
+    "model": "gemini-1.5-flash",
+    "enable_ai_fallback": true,
+    "max_history": 10
+  },
+  "features": {
+    "wake_word_detection": false,
+    "hotkey": "ctrl+shift+space",
+    "auto_screenshot_save": true,
+    "screenshot_dir": "%USERPROFILE%\\Desktop",
+    "notes_dir": "%USERPROFILE%\\Documents\\ARIA Notes",
+    "remind_water_interval_min": 60
+  },
+  "ui": {
+    "theme": "dark",
+    "accent_color": "#7c3aed",
+    "show_system_stats": true,
+    "animation_speed": "normal"
+  }
+}
