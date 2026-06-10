@@ -12,7 +12,7 @@ SpeechRecognition>=3.10.0
 # PyAudio — install manually if auto-install fails:
 #   pip install pipwin && pipwin install pyaudio
 #   OR download wheel from: https://www.lfd.uci.edu/~gohlke/pythonlibs/#pyaudio
-pyaudio>=0.2.14
+pyaudio>=0.2.14; sys_platform == 'win32'
 
 # Text-to-Speech
 pyttsx3>=2.90
@@ -26,14 +26,14 @@ langdetect>=1.0.9
 # System Automation
 pyautogui>=0.9.54
 psutil>=5.9.8
-pywin32>=306
-comtypes>=1.4.8
+pywin32>=306; sys_platform == 'win32'
+comtypes>=1.4.8; sys_platform == 'win32'
 
 # Volume control (Windows)
-pycaw>=20230625
+pycaw>=20230625; sys_platform == 'win32'
 
 # Screen brightness
-screen-brightness-control>=0.22.1
+screen-brightness-control>=0.22.1; sys_platform == 'win32'
 
 # AI Brain (optional — set API key in config.json)
 google-generativeai>=0.8.0
@@ -49,3 +49,4 @@ playsound>=1.3.0
 keyboard>=0.13.5
 Pillow>=10.0.0
 pip-system-certs>=4.0; sys_platform == 'win32'
+streamlit>=1.30.0
