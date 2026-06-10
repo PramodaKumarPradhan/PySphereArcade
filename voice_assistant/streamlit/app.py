@@ -3,8 +3,8 @@ import os
 import sys
 import datetime
 
-# Add current directory to path to allow importing language modules
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+# Add the parent directory to path to allow importing language modules
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from language.translator import LanguageTranslator
 
@@ -68,7 +68,6 @@ if user_query := st.chat_input("Tulis sesuatu... / Speak or type a command..."):
 
     # 3. Formulate the response
     response_en = ""
-    action_taken = ""
 
     # Rule-based routing simulation
     if any(w in normalized_query for w in ["hello", "hi", "hey", "apa khabar", "namaste"]):
@@ -90,12 +89,10 @@ if user_query := st.chat_input("Tulis sesuatu... / Speak or type a command..."):
         gemini_key = os.environ.get("GEMINI_API_KEY", "")
         if gemini_key:
             try:
-                import google.genai as genai
-                client = genai.Client(api_key=gemini_key)
-                response = client.models.generate_content(
-                    model="gemini-1.5-flash",
-                    contents=user_query,
-                )
+                import google.generativeai as genai
+                genai.configure(api_key=gemini_key)
+                model = genai.GenerativeModel("gemini-1.5-flash")
+                response = model.generate_content(user_query)
                 response_en = response.text
             except Exception as e:
                 response_en = f"I'm not sure how to handle that. (Error calling cloud AI: {e})"
