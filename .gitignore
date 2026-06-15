@@ -22,3 +22,7 @@ test_temp*
 build/
 dist/
 *.spec
+
+# Large Model assets
+*.task
+

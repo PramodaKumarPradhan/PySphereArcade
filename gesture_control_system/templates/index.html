@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GestureLink AI - Touchless Interface & Robotics Control</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <!-- Background glow shapes -->
+    <div class="glow-bg-1"></div>
+    <div class="glow-bg-2"></div>
+
+    <div class="app-container">
+        <!-- Dashboard Header -->
+        <header class="app-header">
+            <div class="logo-area">
+                <span class="logo-icon">⚡</span>
+                <div class="logo-text">
+                    <h1>GestureLink <span class="logo-accent">AI</span></h1>
+                    <p class="tagline">Neural Hand Gesture Recognition & Robotics Telemetry Dashboard</p>
+                </div>
+            </div>
+            
+            <div class="header-badges">
+                <div class="status-badge" id="camera-status">
+                    <span class="status-indicator yellow"></span>
+                    <span class="badge-text">Initializing Camera...</span>
+                </div>
+                <div class="status-badge" id="control-status">
+                    <span class="status-indicator red"></span>
+                    <span class="badge-text">OS Control: OFF</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Dashboard Grid -->
+        <main class="dashboard-grid">
+            
+            <!-- Column 1: Camera Vision Feed -->
+            <section class="dashboard-card card-vision">
+                <div class="card-header">
+                    <h2>Live Vision Feed</h2>
+                    <span class="card-subtitle">MediaPipe Hand Landmark Tracking</span>
+                </div>
+                <div class="feed-wrapper">
+                    <!-- The MJPEG live stream -->
+                    <img id="video-feed" src="{{ url_for('video_feed') }}" alt="Live Camera Video Feed" class="vision-img">
+                    
+                    <!-- Overlay statistics -->
+                    <div class="overlay-stats">
+                        <div class="stat-pill">
+                            <span class="stat-label">Gesture:</span>
+                            <span class="stat-value text-glow-green" id="curr-gesture">None</span>
+                        </div>
+                        <div class="stat-pill">
+                            <span class="stat-label">Conf:</span>
+                            <span class="stat-value" id="curr-confidence">0%</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="vision-telemetry">
+                    <div class="tel-row">
+                        <span>Hand Side:</span>
+                        <strong id="hand-label">None</strong>
+                    </div>
+                    <div class="tel-row">
+                        <span>Pointer Raw (X, Y):</span>
+                        <strong id="raw-coords">0.50, 0.50</strong>
+                    </div>
+                    <div class="tel-row">
+                        <span>EMA Filtered (X, Y):</span>
+                        <strong id="smooth-coords">0.50, 0.50</strong>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Column 2: SVG Robotic Arm Simulator -->
+            <section class="dashboard-card card-simulator">
+                <div class="card-header">
+                    <h2>Robotic Arm Control Sim</h2>
+                    <span class="card-subtitle">Real-time Inverse Kinematics (IK) Driver</span>
+                </div>
+                
+                <div class="simulator-canvas-wrapper">
+                    <svg id="robot-svg" viewBox="0 0 400 400" width="100%" height="100%">
+                        <!-- Definitions for gradients/glow filters -->
+                        <defs>
+                            <!-- Glow Filter -->
+                            <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+                                <feGaussianBlur stdDeviation="5" result="blur" />
+                                <feMerge>
+                                    <feMergeNode in="blur" />
+                                    <feMergeNode in="SourceGraphic" />
+                                </feMerge>
+                            </filter>
+                            
+                            <!-- Robotic joint gradients -->
+                            <linearGradient id="linkGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stop-color="#0284c7" />
+                                <stop offset="100%" stop-color="#0ea5e9" />
+                            </linearGradient>
+                            
+                            <linearGradient id="glowGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stop-color="#10b981" />
+                                <stop offset="100%" stop-color="#059669" />
+                            </linearGradient>
+                        </defs>
+                        
+                        <!-- Grid lines -->
+                        <g opacity="0.15">
+                            <line x1="50" y1="0" x2="50" y2="400" stroke="#475569" stroke-width="1" />
+                            <line x1="100" y1="0" x2="100" y2="400" stroke="#475569" stroke-width="1" />
+                            <line x1="150" y1="0" x2="150" y2="400" stroke="#475569" stroke-width="1" />
+                            <line x1="200" y1="0" x2="200" y2="400" stroke="#475569" stroke-width="1" />
+                            <line x1="250" y1="0" x2="250" y2="400" stroke="#475569" stroke-width="1" />
+                            <line x1="300" y1="0" x2="300" y2="400" stroke="#475569" stroke-width="1" />
+                            <line x1="350" y1="0" x2="350" y2="400" stroke="#475569" stroke-width="1" />
+                            
+                            <line x1="0" y1="50" x2="400" y2="50" stroke="#475569" stroke-width="1" />
+                            <line x1="0" y1="100" x2="400" y2="100" stroke="#475569" stroke-width="1" />
+                            <line x1="0" y1="150" x2="400" y2="150" stroke="#475569" stroke-width="1" />
+                            <line x1="0" y1="200" x2="400" y2="200" stroke="#475569" stroke-width="1" />
+                            <line x1="0" y1="250" x2="400" y2="250" stroke="#475569" stroke-width="1" />
+                            <line x1="0" y1="300" x2="400" y2="300" stroke="#475569" stroke-width="1" />
+                            <line x1="0" y1="350" x2="400" y2="350" stroke="#475569" stroke-width="1" />
+                        </g>
+
+                        <!-- Base Rotary Stage -->
+                        <path d="M 120 370 L 280 370 L 250 350 L 150 350 Z" fill="#1e293b" stroke="#334155" stroke-width="2" />
+                        <ellipse cx="200" cy="350" rx="40" ry="10" fill="#334155" stroke="#0ea5e9" stroke-width="1" />
+                        
+                        <!-- Range of movement limit circle (dashed) -->
+                        <circle cx="200" cy="350" r="230" fill="none" stroke="#0284c7" stroke-width="1" stroke-dasharray="5, 8" opacity="0.25" />
+                        
+                        <!-- Target tracking reticle -->
+                        <g id="target-reticle">
+                            <circle cx="200" cy="200" r="12" fill="none" stroke="#10b981" stroke-dasharray="2,2" stroke-width="1.5" />
+                            <line x1="200" y1="185" x2="200" y2="215" stroke="#10b981" stroke-width="1" />
+                            <line x1="185" y1="200" x2="215" y2="200" stroke="#10b981" stroke-width="1" />
+                        </g>
+
+                        <!-- Link 1: Shoulder -> Elbow -->
+                        <line id="link1" x1="200" y1="350" x2="200" y2="230" stroke="url(#linkGradient)" stroke-width="14" stroke-linecap="round" filter="url(#glow)" />
+                        <!-- Link 2: Elbow -> Wrist -->
+                        <line id="link2" x1="200" y1="230" x2="200" y2="120" stroke="#38bdf8" stroke-width="10" stroke-linecap="round" />
+                        
+                        <!-- Joint Joints -->
+                        <!-- Shoulder Joint (Base) -->
+                        <circle cx="200" cy="350" r="12" fill="#0f172a" stroke="#0ea5e9" stroke-width="3" />
+                        
+                        <!-- Elbow Joint -->
+                        <circle id="joint-elbow" cx="200" cy="230" r="10" fill="#0f172a" stroke="#38bdf8" stroke-width="2.5" />
+                        
+                        <!-- Wrist Joint -->
+                        <circle id="joint-wrist" cx="200" cy="120" r="7" fill="#0f172a" stroke="#38bdf8" stroke-width="2" />
+                        
+                        <!-- End Effector: Claw Assembly -->
+                        <g id="claw-assembly">
+                            <!-- Base block of claw -->
+                            <rect x="-10" y="-5" width="20" height="10" fill="#334155" stroke="#475569" stroke-width="1" rx="2" transform="translate(200, 120)" />
+                            
+                            <!-- Left claw finger -->
+                            <path id="claw-finger-l" d="M -10 -5 C -20 -15 -18 -30 -5 -35 C -8 -25 -10 -15 -5 -5" fill="#f43f5e" stroke="#e11d48" stroke-width="1" transform="translate(200, 120)" />
+                            <!-- Right claw finger -->
+                            <path id="claw-finger-r" d="M 10 -5 C 20 -15 18 -30 5 -35 C 8 -25 10 -15 5 -5" fill="#f43f5e" stroke="#e11d48" stroke-width="1" transform="translate(200, 120)" />
+                        </g>
+                    </svg>
+                    
+                    <!-- Dynamic IK labels overlay -->
+                    <div class="sim-labels">
+                        <div>Claw Command: <span id="claw-state-label" class="text-glow-red">OPEN</span></div>
+                        <div>Target (x,y): <span id="sim-target-label">200, 200</span></div>
+                        <div>Shoulder Ang: <span id="shoulder-ang-label">0°</span></div>
+                        <div>Elbow Ang: <span id="elbow-ang-label">0°</span></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Column 3: Control Panel & Console Logs -->
+            <section class="dashboard-card card-control">
+                <div class="card-header">
+                    <h2>Touchless Interface Panel</h2>
+                    <span class="card-subtitle">OS Action Mapping & Configurations</span>
+                </div>
+                
+                <!-- Toggle OS Control -->
+                <div class="control-group">
+                    <div class="toggle-row">
+                        <div class="toggle-text">
+                            <h3>Enable Mouse/OS Control</h3>
+                            <p>Map hand pointing to OS mouse actions</p>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" id="toggle-os-control">
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+                    
+                    <!-- Sensitivity slider -->
+                    <div class="slider-row">
+                        <div class="slider-labels">
+                            <span class="slider-title">Mouse Sensitivity</span>
+                            <span id="sensitivity-val">50%</span>
+                        </div>
+                        <input type="range" min="10" max="90" value="50" class="range-slider" id="sensitivity-slider">
+                    </div>
+                </div>
+                
+                <!-- Action Mapping Table -->
+                <div class="mapping-table-wrapper">
+                    <h3>Gesture Mapping Reference</h3>
+                    <table class="mapping-table">
+                        <thead>
+                            <tr>
+                                <th>Gesture</th>
+                                <th>Touchless Interface Action</th>
+                                <th>Robotic Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr id="row-Pointing">
+                                <td><span class="badge gesture-pointing">Pointing</span></td>
+                                <td>Move Cursor (Index finger tip)</td>
+                                <td>Track Coordinates</td>
+                            </tr>
+                            <tr id="row-Pinch">
+                                <td><span class="badge gesture-pinch">Pinch</span></td>
+                                <td>Left Click & Drag (Mouse Down)</td>
+                                <td>Track + Move Close</td>
+                            </tr>
+                            <tr id="row-Fist">
+                                <td><span class="badge gesture-fist">Fist</span></td>
+                                <td>Release Mouse (Drag end)</td>
+                                <td><strong class="color-red">Close Claw</strong></td>
+                            </tr>
+                            <tr id="row-Open-Palm">
+                                <td><span class="badge gesture-palm">Open Palm</span></td>
+                                <td>Neutral State</td>
+                                <td><strong class="color-green">Open Claw</strong></td>
+                            </tr>
+                            <tr id="row-OK">
+                                <td><span class="badge gesture-ok">OK</span></td>
+                                <td>Scroll Page (Hand Up/Down)</td>
+                                <td>Activate Telemetry</td>
+                            </tr>
+                            <tr id="row-Thumbs-Up">
+                                <td><span class="badge gesture-thumbsup">Thumbs Up</span></td>
+                                <td>Increase System Volume</td>
+                                <td>Raise Base Elev</td>
+                            </tr>
+                            <tr id="row-Thumbs-Down">
+                                <td><span class="badge gesture-thumbsdown">Thumbs Down</span></td>
+                                <td>Decrease System Volume</td>
+                                <td>Lower Base Elev</td>
+                            </tr>
+                            <tr id="row-Victory">
+                                <td><span class="badge gesture-victory">Victory</span></td>
+                                <td>Toggle Media Play/Pause</td>
+                                <td>Reset Position</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Live Console Output -->
+                <div class="console-wrapper">
+                    <div class="console-header">
+                        <h3>Diagnostic Event Log</h3>
+                        <button class="btn-clear" id="btn-clear-logs">Clear</button>
+                    </div>
+                    <div class="console-logs" id="console-logs-container">
+                        <div class="console-line line-info">[00:00:00] Initializing telemetry stream...</div>
+                    </div>
+                </div>
+            </section>
+        </main>
+        
+        <!-- Failsafe Footer Alert -->
+        <footer class="app-footer">
+            <div class="failsafe-alert">
+                <span class="alert-icon">⚠️</span>
+                <span><strong>OS CONTROL FAILSAFE:</strong> Move your hand or mouse pointer directly to <strong>any corner of the screen</strong> to immediately halt and abort touchless cursor execution.</span>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Main Dashboard JS Logic -->
+    <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+</body>
+</html>
