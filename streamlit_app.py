@@ -45,7 +45,21 @@ if os.path.exists(dashboard_path):
 else:
     st.error("Error: Could not locate the dashboard HTML template in your gesture_control_system/templates directory.")
 
-# 3. Serve the self-contained dashboard via iframe
+# 3. Serve the self-contained dashboard via a custom iframe allowing camera permissions
 if html_content:
-    # Render using Streamlit components. height=900 matches layout comfortably.
-    components.html(html_content, height=950, scrolling=True)
+    import base64
+    encoded_html = base64.b64encode(html_content.encode('utf-8')).decode('utf-8')
+    iframe_src = f"data:text/html;base64,{encoded_html}"
+    
+    iframe_html = f'''
+        <iframe 
+            src="{iframe_src}" 
+            width="100%" 
+            height="950" 
+            style="border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; background-color: #060813;" 
+            allow="camera; microphone; display-capture;" 
+            sandbox="allow-scripts allow-same-origin allow-forms allow-popups">
+        </iframe>
+    '''
+    st.html(iframe_html)
+
