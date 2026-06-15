@@ -10,25 +10,10 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# Hide Streamlit brandings and padding for a clean full-screen feel
-hide_st_style = """
-            <style>
-            #MainMenu {visibility: hidden;}
-            footer {visibility: hidden;}
-            header {visibility: hidden;}
-            .block-container {
-                padding-top: 1.5rem;
-                padding-bottom: 0rem;
-                padding-left: 1rem;
-                padding-right: 1rem;
-            }
-            iframe {
-                border-radius: 12px;
-                border: 1px solid rgba(255, 255, 255, 0.08) !important;
-            }
-            </style>
-            """
-st.markdown(hide_st_style, unsafe_allow_html=True)
+# Show standard Streamlit UI for debugging errors
+st.title("GestureLink AI - Touchless Robotics Dashboard")
+st.write("Initializing WebAssembly vision engine inside your browser...")
+
 
 # 2. Resolve Path & Load Dashboard HTML content
 dashboard_path = os.path.join(
