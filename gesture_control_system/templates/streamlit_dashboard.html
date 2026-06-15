@@ -1,0 +1,1182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GestureLink AI - Streamlit Web Dashboard</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    
+    <style>
+        /* CSS styling identical to style.css */
+        :root {
+            --bg-dark: #060813;
+            --panel-bg: rgba(13, 17, 34, 0.65);
+            --panel-bg-hover: rgba(22, 28, 54, 0.8);
+            --border: rgba(255, 255, 255, 0.06);
+            --border-glow: rgba(14, 165, 233, 0.2);
+            --primary: #0ea5e9;
+            --primary-glow: rgba(14, 165, 233, 0.4);
+            --success: #10b981;
+            --success-glow: rgba(16, 185, 129, 0.4);
+            --danger: #f43f5e;
+            --danger-glow: rgba(244, 63, 94, 0.4);
+            --warning: #f59e0b;
+            --warning-glow: rgba(245, 158, 11, 0.4);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --text-dim: #64748b;
+            --font-header: 'Outfit', sans-serif;
+            --font-body: 'Inter', sans-serif;
+            --font-code: 'Fira Code', monospace;
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            font-family: var(--font-body);
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        .glow-bg-1, .glow-bg-2 {
+            position: absolute;
+            width: 500px;
+            height: 500px;
+            border-radius: 50%;
+            filter: blur(130px);
+            z-index: -1;
+            opacity: 0.15;
+            pointer-events: none;
+            animation: drift 25s infinite alternate ease-in-out;
+        }
+
+        .glow-bg-1 {
+            background: radial-gradient(circle, var(--primary) 0%, transparent 70%);
+            top: -100px;
+            right: -100px;
+        }
+
+        .glow-bg-2 {
+            background: radial-gradient(circle, var(--success) 0%, transparent 70%);
+            bottom: -100px;
+            left: -100px;
+            animation-delay: -10s;
+        }
+
+        @keyframes drift {
+            0% { transform: translate(0, 0) scale(1); }
+            100% { transform: translate(100px, 80px) scale(1.2); }
+        }
+
+        .app-container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            min-height: 100vh;
+        }
+
+        .app-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 14px 20px;
+            background: var(--panel-bg);
+            border: 1px solid var(--border);
+            backdrop-filter: blur(12px);
+            border-radius: 14px;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.4);
+        }
+
+        .logo-area {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-icon {
+            font-size: 1.8rem;
+            animation: pulse-glow 2s infinite alternate;
+        }
+
+        .logo-text h1 {
+            font-family: var(--font-header);
+            font-size: 1.5rem;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+        }
+
+        .logo-accent {
+            color: var(--primary);
+            text-shadow: 0 0 10px var(--primary-glow);
+        }
+
+        .tagline {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .header-badges {
+            display: flex;
+            gap: 10px;
+        }
+
+        .status-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 12px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            font-size: 0.8rem;
+        }
+
+        .status-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        .status-indicator.green {
+            background-color: var(--success);
+            box-shadow: 0 0 6px var(--success-glow);
+        }
+
+        .status-indicator.yellow {
+            background-color: var(--warning);
+            box-shadow: 0 0 6px var(--warning-glow);
+        }
+
+        .status-indicator.red {
+            background-color: var(--danger);
+            box-shadow: 0 0 6px var(--danger-glow);
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1.2fr;
+            gap: 20px;
+            flex-grow: 1;
+        }
+
+        @media (max-width: 1100px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .dashboard-card {
+            background: var(--panel-bg);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            backdrop-filter: blur(16px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+        }
+
+        .card-header h2 {
+            font-family: var(--font-header);
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+
+        .card-subtitle {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            display: block;
+        }
+
+        .feed-wrapper {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 4/3;
+            border-radius: 10px;
+            overflow: hidden;
+            background-color: #000;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        #webcam {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transform: scaleX(-1); /* Mirror view */
+        }
+
+        #canvas-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        .overlay-stats {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            display: flex;
+            gap: 6px;
+        }
+
+        .stat-pill {
+            background: rgba(13, 17, 34, 0.85);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 4px 10px;
+            border-radius: 5px;
+            font-size: 0.75rem;
+            display: flex;
+            gap: 4px;
+        }
+
+        .stat-label { color: var(--text-muted); }
+        .stat-value { font-weight: 700; }
+        .text-glow-green { color: var(--success); text-shadow: 0 0 6px var(--success-glow); }
+
+        .vision-telemetry {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            background: rgba(0, 0, 0, 0.25);
+            border-radius: 10px;
+            padding: 12px;
+        }
+
+        .tel-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+        }
+
+        .tel-row span { color: var(--text-muted); }
+        .tel-row strong { font-family: var(--font-code); color: var(--text-main); }
+
+        .simulator-canvas-wrapper {
+            background-color: #070913;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            position: relative;
+            width: 100%;
+            aspect-ratio: 1/1;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #robot-svg {
+            max-width: 100%;
+            max-height: 100%;
+        }
+
+        .sim-labels {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            right: 10px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 4px;
+            font-size: 0.7rem;
+            font-family: var(--font-code);
+            color: var(--text-muted);
+            background: rgba(7, 9, 19, 0.75);
+            padding: 6px 10px;
+            border-radius: 6px;
+            border: 1px solid rgba(255, 255, 255, 0.03);
+        }
+
+        .text-glow-red { color: var(--danger); text-shadow: 0 0 6px var(--danger-glow); font-weight: bold; }
+
+        .control-group {
+            background: rgba(0, 0, 0, 0.25);
+            border-radius: 12px;
+            padding: 14px;
+            border: 1px solid rgba(255, 255, 255, 0.03);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .toggle-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .toggle-text h3 { font-size: 0.95rem; font-weight: 500; }
+        .toggle-text p { font-size: 0.7rem; color: var(--text-muted); }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 42px;
+            height: 22px;
+        }
+
+        .switch input { opacity: 0; width: 0; height: 0; }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #334155;
+            transition: .3s;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 16px; width: 16px;
+            left: 3px; bottom: 3px;
+            background-color: white;
+            transition: .3s;
+        }
+
+        input:checked + .slider {
+            background-color: var(--primary);
+            box-shadow: 0 0 8px var(--primary-glow);
+        }
+
+        input:checked + .slider:before { transform: translateX(20px); }
+        .slider.round { border-radius: 22px; }
+        .slider.round:before { border-radius: 50%; }
+
+        .slider-row {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .slider-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+        }
+
+        .slider-title { color: var(--text-muted); }
+        #sensitivity-val { font-weight: bold; color: var(--primary); }
+        .range-slider {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 4px;
+            border-radius: 2px;
+            background: #334155;
+            outline: none;
+        }
+
+        .range-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: var(--primary);
+            cursor: pointer;
+            box-shadow: 0 0 8px var(--primary-glow);
+        }
+
+        .mapping-table-wrapper h3 {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+        }
+
+        .mapping-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.75rem;
+            text-align: left;
+        }
+
+        .mapping-table th {
+            padding: 6px 8px;
+            color: var(--text-dim);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .mapping-table td {
+            padding: 8px 8px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+            color: var(--text-muted);
+        }
+
+        .mapping-table tr.active-mapping td {
+            background: rgba(14, 165, 233, 0.08);
+            color: var(--text-main);
+        }
+
+        .badge {
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+
+        .gesture-pointing { background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); }
+        .badge.active { background: rgba(52, 211, 153, 0.2) !important; color: #34d399 !important; border: 1px solid rgba(52, 211, 153, 0.4) !important; }
+        .gesture-pinch { background: rgba(14, 165, 233, 0.15); color: #0ea5e9; border: 1px solid rgba(14, 165, 233, 0.3); }
+        .gesture-fist { background: rgba(244, 63, 94, 0.15); color: #f43f5e; border: 1px solid rgba(244, 63, 94, 0.3); }
+        .gesture-palm { background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); }
+        .gesture-ok { background: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3); }
+        .gesture-thumbsup { background: rgba(167, 139, 250, 0.15); color: #a78bfa; border: 1px solid rgba(167, 139, 250, 0.3); }
+        .gesture-thumbsdown { background: rgba(217, 70, 239, 0.15); color: #d946ef; border: 1px solid rgba(217, 70, 239, 0.3); }
+        .gesture-victory { background: rgba(236, 72, 153, 0.15); color: #ec4899; border: 1px solid rgba(236, 72, 153, 0.3); }
+
+        .console-wrapper {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .console-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .console-header h3 { font-size: 0.85rem; color: var(--text-muted); }
+        .btn-clear {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            cursor: pointer;
+        }
+
+        .console-logs {
+            background-color: #05060b;
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            border-radius: 6px;
+            height: 110px;
+            padding: 8px 12px;
+            font-family: var(--font-code);
+            font-size: 0.7rem;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .console-line { line-height: 1.4; }
+        .line-info { color: var(--text-muted); }
+        .line-action { color: var(--primary); }
+        .line-error { color: var(--danger); }
+        
+        .failsafe-alert {
+            background: rgba(245, 158, 11, 0.05);
+            border: 1px solid rgba(245, 158, 11, 0.15);
+            border-radius: 10px;
+            padding: 10px 16px;
+            font-size: 0.8rem;
+            color: #fcd34d;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="glow-bg-1"></div>
+    <div class="glow-bg-2"></div>
+
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="logo-area">
+                <span class="logo-icon">⚡</span>
+                <div class="logo-text">
+                    <h1>GestureLink <span class="logo-accent">AI</span></h1>
+                    <p class="tagline">Neural Hand Gesture Recognition & Robotics Telemetry Dashboard</p>
+                </div>
+            </div>
+            
+            <div class="header-badges">
+                <div class="status-badge" id="camera-status-badge">
+                    <span class="status-indicator yellow" id="cam-indicator"></span>
+                    <span class="badge-text" id="cam-status-text">Loading Model...</span>
+                </div>
+                <div class="status-badge">
+                    <span class="status-indicator green"></span>
+                    <span class="badge-text">WebAssembly Core</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main -->
+        <main class="dashboard-grid">
+            <!-- Col 1: Webcam -->
+            <section class="dashboard-card">
+                <div class="card-header">
+                    <h2>Live Vision Feed</h2>
+                    <span class="card-subtitle">Client-Side WebGL Landmark Tracking</span>
+                </div>
+                <div class="feed-wrapper">
+                    <video id="webcam" autoplay playsinline></video>
+                    <canvas id="canvas-overlay"></canvas>
+                    
+                    <div class="overlay-stats">
+                        <div class="stat-pill">
+                            <span class="stat-label">Gesture:</span>
+                            <span class="stat-value text-glow-green" id="curr-gesture">None</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="vision-telemetry">
+                    <div class="tel-row">
+                        <span>FPS Rate:</span>
+                        <strong id="fps-label">0.0 Hz</strong>
+                    </div>
+                    <div class="tel-row">
+                        <span>Pointer Coords (X, Y):</span>
+                        <strong id="coords-label">0.50, 0.50</strong>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Col 2: Robot Sim -->
+            <section class="dashboard-card">
+                <div class="card-header">
+                    <h2>Robotic Arm Control Sim</h2>
+                    <span class="card-subtitle">Local Browser Inverse Kinematics (IK) Driver</span>
+                </div>
+                
+                <div class="simulator-canvas-wrapper">
+                    <svg id="robot-svg" viewBox="0 0 400 400" width="100%" height="100%">
+                        <defs>
+                            <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+                                <feGaussianBlur stdDeviation="5" result="blur" />
+                                <feMerge>
+                                    <feMergeNode in="blur" />
+                                    <feMergeNode in="SourceGraphic" />
+                                </feMerge>
+                            </filter>
+                            <linearGradient id="linkGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stop-color="#0284c7" />
+                                <stop offset="100%" stop-color="#0ea5e9" />
+                            </linearGradient>
+                        </defs>
+                        
+                        <g opacity="0.12">
+                            <line x1="50" y1="0" x2="50" y2="400" stroke="#475569" />
+                            <line x1="100" y1="0" x2="100" y2="400" stroke="#475569" />
+                            <line x1="150" y1="0" x2="150" y2="400" stroke="#475569" />
+                            <line x1="200" y1="0" x2="200" y2="400" stroke="#475569" />
+                            <line x1="250" y1="0" x2="250" y2="400" stroke="#475569" />
+                            <line x1="300" y1="0" x2="300" y2="400" stroke="#475569" />
+                            <line x1="350" y1="0" x2="350" y2="400" stroke="#475569" />
+                            
+                            <line x1="0" y1="50" x2="400" y2="50" stroke="#475569" />
+                            <line x1="0" y1="100" x2="400" y2="100" stroke="#475569" />
+                            <line x1="0" y1="150" x2="400" y2="150" stroke="#475569" />
+                            <line x1="0" y1="200" x2="400" y2="200" stroke="#475569" />
+                            <line x1="0" y1="250" x2="400" y2="250" stroke="#475569" />
+                            <line x1="0" y1="300" x2="400" y2="300" stroke="#475569" />
+                            <line x1="0" y1="350" x2="400" y2="350" stroke="#475569" />
+                        </g>
+
+                        <!-- Base -->
+                        <path d="M 120 370 L 280 370 L 250 350 L 150 350 Z" fill="#1e293b" stroke="#334155" stroke-width="2" />
+                        <ellipse cx="200" cy="350" rx="40" ry="10" fill="#334155" stroke="#0ea5e9" stroke-width="1" />
+                        
+                        <!-- Range Limit -->
+                        <circle cx="200" cy="350" r="225" fill="none" stroke="#0284c7" stroke-width="1" stroke-dasharray="5, 8" opacity="0.2" />
+                        
+                        <!-- Target reticle -->
+                        <g id="target-reticle">
+                            <circle cx="200" cy="200" r="10" fill="none" stroke="#10b981" stroke-dasharray="2,2" />
+                            <line x1="200" y1="188" x2="200" y2="212" stroke="#10b981" />
+                            <line x1="188" y1="200" x2="212" y2="200" stroke="#10b981" />
+                        </g>
+
+                        <line id="link1" x1="200" y1="350" x2="200" y2="230" stroke="url(#linkGradient)" stroke-width="12" stroke-linecap="round" filter="url(#glow)" />
+                        <line id="link2" x1="200" y1="230" x2="200" y2="120" stroke="#38bdf8" stroke-width="8" stroke-linecap="round" />
+                        
+                        <circle cx="200" cy="350" r="10" fill="#0f172a" stroke="#0ea5e9" stroke-width="2.5" />
+                        <circle id="joint-elbow" cx="200" cy="230" r="8" fill="#0f172a" stroke="#38bdf8" stroke-width="2" />
+                        <circle id="joint-wrist" cx="200" cy="120" r="6" fill="#0f172a" stroke="#38bdf8" stroke-width="1.5" />
+                        
+                        <!-- Claw -->
+                        <g id="claw-assembly">
+                            <rect x="-8" y="-4" width="16" height="8" fill="#334155" stroke="#475569" rx="2" transform="translate(200, 120)" />
+                            <path id="claw-finger-l" d="M -10 -5 C -25 -15 -22 -32 -5 -38 C -9 -25 -10 -15 -5 -5" fill="#f43f5e" stroke="#e11d48" transform="translate(200, 120)" />
+                            <path id="claw-finger-r" d="M 10 -5 C 25 -15 22 -32 5 -38 C 9 -25 10 -15 5 -5" fill="#f43f5e" stroke="#e11d48" transform="translate(200, 120)" />
+                        </g>
+                    </svg>
+                    
+                    <div class="sim-labels">
+                        <div>Claw Stage: <span id="claw-state-label" class="text-glow-red">OPEN</span></div>
+                        <div>Target (x,y): <span id="sim-target-label">200, 200</span></div>
+                        <div>Shoulder Ang: <span id="shoulder-ang-label">0°</span></div>
+                        <div>Elbow Ang: <span id="elbow-ang-label">0°</span></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Col 3: Controls -->
+            <section class="dashboard-card">
+                <div class="card-header">
+                    <h2>Touchless Interface Panel</h2>
+                    <span class="card-subtitle">Cloud Dashboard & Controls</span>
+                </div>
+                
+                <div class="control-group">
+                    <div class="toggle-row">
+                        <div class="toggle-text">
+                            <h3>Enable Mouse/OS Control</h3>
+                            <p>Map hand pointing to OS mouse actions</p>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" id="toggle-os-control">
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+                    
+                    <div class="slider-row">
+                        <div class="slider-labels">
+                            <span class="slider-title">Filter Sensitivity</span>
+                            <span id="sensitivity-val">50%</span>
+                        </div>
+                        <input type="range" min="10" max="90" value="50" class="range-slider" id="sensitivity-slider">
+                    </div>
+                </div>
+                
+                <div class="mapping-table-wrapper">
+                    <table class="mapping-table">
+                        <thead>
+                            <tr>
+                                <th>Gesture</th>
+                                <th>OS Actions (Local Only)</th>
+                                <th>Robotics</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr id="row-Pointing">
+                                <td><span class="badge gesture-pointing">Pointing</span></td>
+                                <td>Move Mouse</td>
+                                <td>Track Coord</td>
+                            </tr>
+                            <tr id="row-Pinch">
+                                <td><span class="badge gesture-pinch">Pinch</span></td>
+                                <td>Click & Drag</td>
+                                <td>Pinch Claw</td>
+                            </tr>
+                            <tr id="row-Fist">
+                                <td><span class="badge gesture-fist">Fist</span></td>
+                                <td>Neutral</td>
+                                <td class="color-red">Close Claw</td>
+                            </tr>
+                            <tr id="row-Open-Palm">
+                                <td><span class="badge gesture-palm">Open Palm</span></td>
+                                <td>Neutral</td>
+                                <td class="color-green">Open Claw</td>
+                            </tr>
+                            <tr id="row-OK">
+                                <td><span class="badge gesture-ok">OK</span></td>
+                                <td>Scroll Page</td>
+                                <td>Telemetry Log</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="console-wrapper">
+                    <div class="console-header">
+                        <h3>Diagnostic Event Log</h3>
+                        <button class="btn-clear" id="btn-clear-logs">Clear</button>
+                    </div>
+                    <div class="console-logs" id="console-logs-container">
+                        <div class="console-line line-info">[SYSTEM] Awaiting webcam connection...</div>
+                    </div>
+                </div>
+            </section>
+        </main>
+        
+        <footer class="app-footer">
+            <div class="failsafe-alert">
+                <span>⚡ <strong>Cloud Mode Note:</strong> OS mouse/volume control is disabled on cloud hosting for security. To experience full touchless computer control via PyAutoGUI, run this application locally using the instructions on GitHub!</span>
+            </div>
+        </footer>
+    </div>
+
+    <!-- MediaPipe ESM loader and Main Client Logic -->
+    <script type="module">
+        // Import FilesetResolver and HandLandmarker directly from CDN
+        import { HandLandmarker, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.8/wasm/vision_bundle.js";
+
+        // DOM Elements
+        const webcam = document.getElementById("webcam");
+        const canvas = document.getElementById("canvas-overlay");
+        const ctx = canvas.getContext("2d");
+        
+        const camIndicator = document.getElementById("cam-indicator");
+        const camStatusText = document.getElementById("cam-status-text");
+        const currGestureVal = document.getElementById("curr-gesture");
+        const fpsLabel = document.getElementById("fps-label");
+        const coordsLabel = document.getElementById("coords-label");
+        const toggleOsControl = document.getElementById("toggle-os-control");
+        const sensitivitySlider = document.getElementById("sensitivity-slider");
+        const sensitivityVal = document.getElementById("sensitivity-val");
+        const consoleContainer = document.getElementById("console-logs-container");
+        const btnClearLogs = document.getElementById("btn-clear-logs");
+
+        // Robotic Arm Elements
+        const link1 = document.getElementById("link1");
+        const link2 = document.getElementById("link2");
+        const jointElbow = document.getElementById("joint-elbow");
+        const jointWrist = document.getElementById("joint-wrist");
+        const targetReticle = document.getElementById("target-reticle");
+        const clawAssembly = document.getElementById("claw-assembly");
+        const clawFingerL = document.getElementById("claw-finger-l");
+        const clawFingerR = document.getElementById("claw-finger-r");
+        const clawStateLabel = document.getElementById("claw-state-label");
+        const simTargetLabel = document.getElementById("sim-target-label");
+        const shoulderAngLabel = document.getElementById("shoulder-ang-label");
+        const elbowAngLabel = document.getElementById("elbow-ang-label");
+
+        // App States
+        let handLandmarker = null;
+        let webcamRunning = false;
+        let lastVideoTime = -1;
+        let lastGesture = "None";
+        let sensitivity = 0.5;
+        
+        // Smoothing states (EMA Filter)
+        let prevX = null, prevY = null;
+        
+        // Robot Geometry
+        const BASE_X = 200;
+        const BASE_Y = 350;
+        const L1 = 125;
+        const L2 = 105;
+        const CLAW_PATHS = {
+            open: {
+                l: "M -10 -5 C -25 -15 -22 -32 -5 -38 C -9 -25 -10 -15 -5 -5",
+                r: "M 10 -5 C 25 -15 22 -32 5 -38 C 9 -25 10 -15 5 -5"
+            },
+            closed: {
+                l: "M -10 -5 C -15 -18 -10 -30 -1 -35 C -3 -22 -6 -13 -5 -5",
+                r: "M 10 -5 C 15 -18 10 -30 1 -35 C 3 -22 6 -13 5 -5"
+            }
+        };
+
+        // Initialize variables
+        log("Loading neural vision engine from CDN...", "info");
+        
+        sensitivitySlider.addEventListener("input", () => {
+            sensitivityVal.innerText = `${sensitivitySlider.value}%`;
+            sensitivity = parseFloat(sensitivitySlider.value) / 100.0;
+        });
+
+        toggleOsControl.addEventListener("change", () => {
+            if (toggleOsControl.checked) {
+                log("[WARNING] OS Control enabled! Note: System control is disabled on cloud environments, but telemetry coordinates remain fully active.", "error");
+            } else {
+                log("[INFO] OS Control disabled.", "info");
+            }
+        });
+
+        btnClearLogs.addEventListener("click", () => {
+            consoleContainer.innerHTML = "";
+            log("Diagnostic console logs cleared.", "info");
+        });
+
+        // Setup Logger
+        function log(msg, type = "info") {
+            const timeStr = new Date().toTimeString().split(' ')[0];
+            const line = document.createElement("div");
+            line.className = `console-line line-${type}`;
+            line.innerText = `[${timeStr}] ${msg}`;
+            consoleContainer.appendChild(line);
+            while (consoleContainer.childElementCount > 50) {
+                consoleContainer.removeChild(consoleContainer.firstChild);
+            }
+            consoleContainer.scrollTop = consoleContainer.scrollHeight;
+        }
+
+        // Initialize HandLandmarker
+        async function initializeDetector() {
+            try {
+                const vision = await FilesetResolver.forVisionTasks(
+                    "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.8/wasm"
+                );
+                
+                handLandmarker = await HandLandmarker.createFromOptions(vision, {
+                    baseOptions: {
+                        modelAssetPath: "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task",
+                        delegate: "GPU"
+                    },
+                    runningMode: "VIDEO",
+                    numHands: 1
+                });
+                
+                camIndicator.className = "status-indicator green";
+                camStatusText.innerText = "Model: READY";
+                log("[SUCCESS] Hand landmarker model loaded successfully.", "info");
+                
+                startCamera();
+            } catch (err) {
+                camIndicator.className = "status-indicator red";
+                camStatusText.innerText = "Load Failed";
+                log(`[CRITICAL ERROR] Failed to load model or WebAssembly resources: ${err}`, "error");
+            }
+        }
+
+        // Initialize Camera
+        function startCamera() {
+            log("Requesting browser camera access...", "info");
+            
+            const constraints = {
+                video: {
+                    width: 640,
+                    height: 480,
+                    facingMode: "user"
+                }
+            };
+            
+            navigator.mediaDevices.getUserMedia(constraints)
+                .then((stream) => {
+                    webcam.srcObject = stream;
+                    webcam.addEventListener("loadeddata", () => {
+                        webcamRunning = true;
+                        canvas.width = webcam.videoWidth;
+                        canvas.height = webcam.videoHeight;
+                        log("[CAMERA] Webcam successfully connected and processing frames.", "info");
+                        requestAnimationFrame(predictLoop);
+                    });
+                })
+                .catch((err) => {
+                    log(`[CAMERA ERROR] Webcam access denied or occupied: ${err.message}`, "error");
+                    log("Running in animated mock-calibration mode.", "info");
+                    startFallbackSimulation();
+                });
+        }
+
+        // Prediction Loop
+        let lastFPSCheck = Date.now();
+        let frameCount = 0;
+        
+        async function predictLoop() {
+            if (!webcamRunning) return;
+            
+            // Draw camera frame mirrored
+            ctx.save();
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.translate(canvas.width, 0);
+            ctx.scale(-1, 1);
+            ctx.drawImage(webcam, 0, 0, canvas.width, canvas.height);
+            ctx.restore();
+            
+            // FPS Counter
+            frameCount++;
+            const now = Date.now();
+            if (now - lastFPSCheck >= 1000) {
+                const currentFPS = (frameCount * 1000) / (now - lastFPSCheck);
+                fpsLabel.innerText = `${currentFPS.toFixed(1)} Hz`;
+                frameCount = 0;
+                lastFPSCheck = now;
+            }
+            
+            // Run MediaPipe Landmark detection
+            if (webcam.currentTime !== lastVideoTime) {
+                lastVideoTime = webcam.currentTime;
+                
+                const results = handLandmarker.detectForVideo(webcam, now);
+                
+                if (results.handLandmarks && results.handLandmarks.length > 0) {
+                    const landmarks = results.handLandmarks[0];
+                    const handedness = results.handedness[0][0].categoryName;
+                    
+                    // Draw Hand Landmarks locally on canvas
+                    drawLandmarksOnCanvas(landmarks);
+                    
+                    // Classify Gesture
+                    const gesture = classifyGestureJS(landmarks, handedness);
+                    currGestureVal.innerText = gesture;
+                    
+                    // Smooth Pointer
+                    const rawX = landmarks[8].x;
+                    const rawY = landmarks[8].y;
+                    const smoothCo = smoothCoordinates(rawX, rawY);
+                    coordsLabel.innerText = `${smoothCo.x.toFixed(2)}, ${smoothCo.y.toFixed(2)}`;
+                    
+                    // Highlight active row in table
+                    highlightTableRow(gesture);
+                    
+                    if (gesture !== lastGesture) {
+                        log(`[GESTURE] Recognized: ${gesture} (${handedness} Hand)`, "info");
+                        lastGesture = gesture;
+                    }
+                    
+                    // Drive simulation
+                    driveRoboticArm(smoothCo.x, smoothCo.y, gesture);
+                } else {
+                    currGestureVal.innerText = "None";
+                    prevX = null; prevY = null;
+                    highlightTableRow(null);
+                }
+            }
+            
+            requestAnimationFrame(predictLoop);
+        }
+
+        // Draw helper
+        function drawLandmarksOnCanvas(landmarks) {
+            ctx.fillStyle = "#10b981";
+            ctx.strokeStyle = "rgba(255, 255, 255, 0.4)";
+            ctx.lineWidth = 3;
+            
+            // Draw connections
+            // Standard indices mapping for hand lines
+            const connections = [
+                [0,1], [1,2], [2,3], [3,4],
+                [0,5], [5,6], [6,7], [7,8],
+                [5,9], [9,10], [10,11], [11,12],
+                [9,13], [13,14], [14,15], [15,16],
+                [13,17], [17,18], [18,19], [19,20],
+                [0,17]
+            ];
+            
+            connections.forEach(([s, e]) => {
+                ctx.beginPath();
+                ctx.moveTo((1.0 - landmarks[s].x) * canvas.width, landmarks[s].y * canvas.height);
+                ctx.lineTo((1.0 - landmarks[e].x) * canvas.width, landmarks[e].y * canvas.height);
+                ctx.stroke();
+            });
+            
+            // Draw Joint dots
+            landmarks.forEach((lm) => {
+                ctx.beginPath();
+                ctx.arc((1.0 - lm.x) * canvas.width, lm.y * canvas.height, 5, 0, 2*Math.PI);
+                ctx.fill();
+            });
+        }
+
+        // EMA Smoothing
+        function smoothCoordinates(rx, ry) {
+            if (prevX === null || prevY === null) {
+                prevX = rx; prevY = ry;
+                return { x: rx, y: ry };
+            }
+            const smoothFactor = 0.3 + (1.0 - sensitivity) * 0.5;
+            const sx = prevX + (rx - prevX) * smoothFactor;
+            const sy = prevY + (ry - prevY) * smoothFactor;
+            prevX = sx; prevY = sy;
+            return { x: sx, y: sy };
+        }
+
+        // Gesture classification logic in JS
+        function classifyGestureJS(lm, label) {
+            const indexOpen = lm[8].y < lm[6].y;
+            const middleOpen = lm[12].y < lm[10].y;
+            const ringOpen = lm[16].y < lm[14].y;
+            const pinkyOpen = lm[20].y < lm[18].y;
+            
+            let thumbOpen = false;
+            if (label === "Right") {
+                thumbOpen = lm[4].x > lm[3].x;
+            } else {
+                thumbOpen = lm[4].x < lm[3].x;
+            }
+            
+            // Thumb index tip distance
+            const dx = lm[4].x - lm[8].x;
+            const dy = lm[4].y - lm[8].y;
+            const dz = lm[4].z - lm[8].z;
+            const pinchDist = Math.sqrt(dx*dx + dy*dy + dz*dz);
+            
+            if (pinchDist < 0.045) return "Pinch";
+            if (pinchDist < 0.065 && middleOpen && ringOpen && pinkyOpen) return "OK";
+            if (lm[4].y < lm[2].y - 0.02 && !indexOpen && !middleOpen && !ringOpen && !pinkyOpen) return "Thumbs Up";
+            if (lm[4].y > lm[2].y + 0.02 && !indexOpen && !middleOpen && !ringOpen && !pinkyOpen) return "Thumbs Down";
+            if (!indexOpen && !middleOpen && !ringOpen && !pinkyOpen) return "Fist";
+            if (indexOpen && middleOpen && ringOpen && pinkyOpen) return "Open Palm";
+            if (indexOpen && !middleOpen && !ringOpen && !pinkyOpen) return "Pointing";
+            if (indexOpen && middleOpen && !ringOpen && !pinkyOpen) return "Victory";
+            return "Unknown";
+        }
+
+        function highlightTableRow(gesture) {
+            document.querySelectorAll(".mapping-table tbody tr").forEach(row => {
+                row.classList.remove("active-mapping");
+                const badge = row.querySelector(".badge");
+                if (badge) badge.classList.remove("active");
+            });
+            if (!gesture) return;
+            const rowId = `row-${gesture.replace(" ", "-")}`;
+            const targetRow = document.getElementById(rowId);
+            if (targetRow) {
+                targetRow.classList.add("active-mapping");
+                const badge = targetRow.querySelector(".badge");
+                if (badge) badge.classList.add("active");
+            }
+        }
+
+        // Robotic Arm Simulation
+        function driveRoboticArm(px_norm, py_norm, gesture) {
+            const tx_norm = 1.0 - px_norm;
+            const ty_norm = py_norm;
+            
+            let tx = 60 + (tx_norm - 0.1) * (280 / 0.8);
+            let ty = 60 + (ty_norm - 0.1) * (220 / 0.8);
+            
+            tx = Math.max(50, Math.min(350, tx));
+            ty = Math.max(50, Math.min(320, ty));
+            
+            let dx = tx - BASE_X;
+            let dy = ty - BASE_Y;
+            let D = Math.sqrt(dx * dx + dy * dy);
+            
+            const maxReach = L1 + L2 - 3;
+            const minReach = 40;
+            
+            if (D > maxReach) {
+                tx = BASE_X + (dx / D) * maxReach;
+                ty = BASE_Y + (dy / D) * maxReach;
+                dx = tx - BASE_X;
+                dy = ty - BASE_Y;
+                D = maxReach;
+            } else if (D < minReach) {
+                tx = BASE_X + (dx / D) * minReach;
+                ty = BASE_Y + (dy / D) * minReach;
+                dx = tx - BASE_X;
+                dy = ty - BASE_Y;
+                D = minReach;
+            }
+            
+            const cosElbow = (D * D - L1 * L1 - L2 * L2) / (2 * L1 * L2);
+            const elbowAngle = Math.acos(Math.max(-1.0, Math.min(1.0, cosElbow)));
+            const alpha = Math.atan2(dy, dx);
+            const cosShoulder = (L1 * L1 + D * D - L2 * L2) / (2 * L1 * D);
+            const beta = Math.acos(Math.max(-1.0, Math.min(1.0, cosShoulder)));
+            
+            const shoulderAngle = alpha - beta;
+            const ex = BASE_X + L1 * Math.cos(shoulderAngle);
+            const ey = BASE_Y + L1 * Math.sin(shoulderAngle);
+            const wx = tx;
+            const wy = ty;
+            
+            link1.setAttribute("x1", BASE_X);
+            link1.setAttribute("y1", BASE_Y);
+            link1.setAttribute("x2", ex);
+            link1.setAttribute("y2", ey);
+            
+            link2.setAttribute("x1", ex);
+            link2.setAttribute("y1", ey);
+            link2.setAttribute("x2", wx);
+            link2.setAttribute("y2", wy);
+            
+            jointElbow.setAttribute("cx", ex);
+            jointElbow.setAttribute("cy", ey);
+            jointWrist.setAttribute("cx", wx);
+            jointWrist.setAttribute("cy", wy);
+            targetReticle.setAttribute("transform", `translate(${wx - 200}, ${wy - 200})`);
+            
+            const link2Angle = Math.atan2(wy - ey, wx - ex);
+            const clawAngleDeg = (link2Angle * 180 / Math.PI) + 90;
+            clawAssembly.setAttribute("transform", `translate(${wx}, ${wy}) rotate(${clawAngleDeg})`);
+            
+            const isClawClosed = (gesture === "Fist" || gesture === "Pinch");
+            if (isClawClosed) {
+                clawFingerL.setAttribute("d", CLAW_PATHS.closed.l);
+                clawFingerR.setAttribute("d", CLAW_PATHS.closed.r);
+                clawStateLabel.innerText = "CLOSED";
+                clawStateLabel.className = "text-glow-red";
+            } else {
+                clawFingerL.setAttribute("d", CLAW_PATHS.open.l);
+                clawFingerR.setAttribute("d", CLAW_PATHS.open.r);
+                clawStateLabel.innerText = "OPEN";
+                clawStateLabel.className = "text-glow-green";
+            }
+            
+            simTargetLabel.innerText = `${Math.round(wx)}, ${Math.round(wy)}`;
+            const shAngDeg = Math.round((-shoulderAngle * 180 / Math.PI));
+            const elAngDeg = Math.round((elbowAngle * 180 / Math.PI));
+            shoulderAngLabel.innerText = `${shAngDeg}°`;
+            elbowAngLabel.innerText = `${elAngDeg}°`;
+        }
+
+        // Fallback Simulation (Runs if camera is unavailable)
+        let simT = 0;
+        function startFallbackSimulation() {
+            camStatusText.innerText = "Camera: DEMO MODE";
+            camIndicator.className = "status-indicator yellow";
+            
+            setInterval(() => {
+                simT += 0.04;
+                const px = 0.5 + 0.25 * Math.cos(simT);
+                const py = 0.5 + 0.20 * Math.sin(simT * 0.7);
+                
+                const gestures = ["Open Palm", "Fist", "Pointing", "Pinch", "OK", "Thumbs Up"];
+                const gestureIndex = Math.floor((simT / 5) % gestures.length);
+                const simGesture = gestures[gestureIndex];
+                
+                currGestureVal.innerText = simGesture;
+                coordsLabel.innerText = `${px.toFixed(2)}, ${py.toFixed(2)}`;
+                fpsLabel.innerText = "30.0 Hz";
+                
+                // Draw simulated circular dot on canvas
+                ctx.fillStyle = "#1e293b";
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                ctx.strokeStyle = "rgba(255,255,255,0.06)";
+                ctx.lineWidth = 1;
+                for (let x = 0; x < canvas.width; x += 40) {
+                    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
+                }
+                for (let y = 0; y < canvas.height; y += 40) {
+                    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
+                }
+                
+                const cx = (1.0 - px) * canvas.width;
+                const cy = py * canvas.height;
+                const color = simGesture === "Fist" ? "#f43f5e" : "#52d399";
+                
+                ctx.beginPath();
+                ctx.arc(cx, cy, 14, 0, 2*Math.PI);
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                
+                ctx.beginPath();
+                ctx.arc(cx, cy, 5, 0, 2*Math.PI);
+                ctx.fillStyle = color;
+                ctx.fill();
+                
+                highlightTableRow(simGesture);
+                if (simGesture !== lastGesture) {
+                    log(`[DEMO] Simulated Gesture: ${simGesture}`, "info");
+                    lastGesture = simGesture;
+                }
+                
+                driveRoboticArm(px, py, simGesture);
+            }, 33);
+        }
+
+        // Run Setup
+        initializeDetector();
+    });
+    </script>
+</body>
+</html>
