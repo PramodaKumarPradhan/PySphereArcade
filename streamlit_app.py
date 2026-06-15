@@ -27,11 +27,16 @@ html_content = ""
 if os.path.exists(dashboard_path):
     with open(dashboard_path, "r", encoding="utf-8") as f:
         html_content = f.read()
+    st.write(f"📂 Found template: `streamlit_dashboard.html` ({len(html_content)} bytes)")
 else:
     st.error("Error: Could not locate the dashboard HTML template in your gesture_control_system/templates directory.")
 
-# 3. Serve the self-contained dashboard via components.html
+# 3. Test Iframe and Serve the self-contained dashboard
+st.write("Testing standard Streamlit HTML components:")
+components.html("<h2 style='color:#10b981; font-family:sans-serif;'>🟢 Debug: Streamlit Iframe Component Loaded Successfully!</h2>", height=60)
+
 if html_content:
     components.html(html_content, height=950, scrolling=True)
+
 
 
